@@ -1,4 +1,5 @@
 import time
+import math
 import torch
 import torch.utils.data as data
 
@@ -12,14 +13,17 @@ from model import ImageConfig, GPTConfig, CLIP
 class TrainConfig:
     data_path: str = "/home/robin/Downloads/CC3M"
     eval_ratio: float = 0.1
-    batch_size: int = 64
-    num_workers: int = 8
+    batch_size: int = 128
+    num_workers: int = 4
     resume: bool = False
     lr: float = 1e-4
-    grad_clip: float = 1.0
+    min_lr: float = 1e-6
+    grad_clip: float = 100.0
     seq_len: int = 64
     log_iters: int = 1000
     eval_iters: int = 10000
+    warmup_iters: int = 2000
+    lr_decay_iters: int = 128000
     max_iters: int = 1000000
 
 
@@ -33,6 +37,7 @@ class Trainer:
         self.ctx = torch.amp.autocast(
             device_type=self.device_type, dtype=torch.bfloat16
         )
+        self.correct_labels = torch.arange(config.batch_size, device=self.device_type)
 
         # prepare dataset
         lst = CC3MList(config.data_path, 0.1)
@@ -68,7 +73,7 @@ class Trainer:
         texts = texts.cuda()
 
         with self.ctx:
-            loss = model((images, texts))
+            logits_image, logits_text, loss = model((images, texts))
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(optimizer)
@@ -77,7 +82,23 @@ class Trainer:
         self.scaler.update()
         optimizer.zero_grad(set_to_none=True)
 
-        return loss
+        return logits_image, logits_text, loss
+
+    def get_lr(self, iteration):
+        config = self.config
+        # 1) linear warmup for warmup_iters steps
+        if iteration < config.warmup_iters:
+            return config.lr * iteration / config.warmup_iters
+        # 2) if it > lr_decay_iters, return min learning rate
+        if iteration > config.lr_decay_iters:
+            return config.min_lr
+        # 3) in between, use cosine decay down to min learning rate
+        decay_ratio = (iteration - config.warmup_iters) / (
+            config.lr_decay_iters - config.warmup_iters
+        )
+        assert 0 <= decay_ratio <= 1
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))  # coeff ranges 0..1
+        return config.min_lr + coeff * (config.lr - config.min_lr)
 
     def train(self):
         iconfig = ImageConfig()
@@ -96,13 +117,21 @@ class Trainer:
         begin = time.time()
 
         for iteration in range(self.config.max_iters):
-            loss = self.train_loop(model, optimizer, batch_iter)
+            lr = self.get_lr(iteration)
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = lr
+
+            logits_image, logits_text, loss = self.train_loop(model, optimizer, batch_iter)
 
             if iteration % self.config.log_iters == 0:
+                _, predict = torch.max(logits_image, dim=-1)
+                correct = (predict == self.correct_labels)
+                accuracy = correct.sum().item() / correct.size(0)
                 now = time.time()
                 duration = now - begin
                 begin = now
-                print(f"[{iteration:03d}] loss: {loss.item():.4f} time {duration:.4f}")
+                epoch = iteration // len(self.train_loader)
+                print(f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}")
             if iteration % self.config.eval_iters == 0:
                 print("eval")
 

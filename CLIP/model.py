@@ -15,8 +15,8 @@ clip_n_embd = 1024
 
 @dataclass
 class ImageConfig:
-    image_encoder_name: str = "convnextv2_base"
-    image_dropout: float = 0.2
+    image_encoder_name: str = "convnextv2_nano"
+    image_dropout: float = 0.0
 
 
 class ImageEncoder(nn.Module):
@@ -26,14 +26,14 @@ class ImageEncoder(nn.Module):
 
         base_model = timm.create_model(
             config.image_encoder_name,
-            pretrained=True,
+            pretrained=False,
             in_chans=3,
             drop_rate=config.image_dropout,
             drop_path_rate=config.image_dropout,
         )
         layers = list(base_model.children())[:-2]
         self.encoder = nn.Sequential(*layers)
-        self.image_proj = nn.Linear(65536, clip_n_embd)
+        self.image_proj = nn.Linear(40960, clip_n_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
@@ -51,7 +51,7 @@ class TextEncoder(nn.Module):
         super().__init__()
 
         self.encoder = GPT(config).cuda()
-        self.txt_proj = nn.Linear(config.seq_len * config.n_embd, clip_n_embd)
+        self.txt_proj = nn.Linear(config.n_embd, clip_n_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
@@ -59,7 +59,8 @@ class TextEncoder(nn.Module):
 
     def forward(self, inp):
         out = self.encoder(inp)
-        out = out.contiguous().view(inp.size(0), -1)
+        out = out[:,-1,:]
+        # out = out.contiguous().view(inp.size(0), -1)
         return self.txt_proj(out)
 
 
@@ -79,8 +80,10 @@ class CLIP(nn.Module):
         images, txts = inp
         img_f = self.img_encoder(images)
         txt_f = self.txt_encoder(txts)
-        img_embds = F.normalize(img_f, p=2, dim=1)  # (B, E)
-        txt_embds = F.normalize(txt_f, p=2, dim=1)  # (B, E)
+        img_embds = img_f
+        txt_embds = txt_f
+        #img_embds = F.normalize(img_f, p=2, dim=1)  # (B, E)
+        #txt_embds = F.normalize(txt_f, p=2, dim=1)  # (B, E)
 
         # mainly learned from https://github.com/openai/CLIP/blob/main/clip/model.py
         logits_per_image = img_embds @ txt_embds.T
@@ -92,7 +95,7 @@ class CLIP(nn.Module):
             F.cross_entropy(logits_per_image, labels)
             + F.cross_entropy(logits_per_text, labels)
         ) / 2.0
-        return loss
+        return logits_per_image, logits_per_text, loss
 
 
 if __name__ == "__main__":

@@ -8,10 +8,10 @@ from torch.nn import functional as F
 
 class GPTConfig:
     vocab_size: int = 50304
-    seq_len: int = 512
-    n_embd: int = 768
-    n_layer: int = 12
-    n_head: int = 12
+    seq_len: int = 64
+    n_embd: int = 512
+    n_layer: int = 8
+    n_head: int = 8
     dropout: float = 0.0
 
 
