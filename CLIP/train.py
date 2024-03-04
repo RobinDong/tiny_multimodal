@@ -28,7 +28,6 @@ class TrainConfig:
 
 
 class Trainer:
-
     def __init__(self, config):
         self.config = config
         self.device_type = "cuda"
@@ -51,6 +50,7 @@ class Trainer:
             shuffle=True,
             pin_memory=True,
         )
+        self.batch_iter = iter(self.train_loader)
 
         self.eval_loader = data.DataLoader(
             eval_ds,
@@ -60,12 +60,15 @@ class Trainer:
             pin_memory=True,
         )
 
-    def train_loop(self, model, optimizer, batch_iter):
+    def train_loop(self, model, optimizer):
         try:
-            images, texts = next(batch_iter)
+            images, texts = next(self.batch_iter)
+            if len(images) < self.config.batch_size:
+                self.batch_iter = iter(self.train_loader)
+                images, texts = next(self.batch_iter)
         except StopIteration:
-            batch_iter = iter(self.train_loader)
-            images, texts = next(batch_iter)
+            self.batch_iter = iter(self.train_loader)
+            images, texts = next(self.batch_iter)
         except Exception as ex:
             print("Loading data exception:", ex)
 
@@ -108,12 +111,8 @@ class Trainer:
         model = CLIP(iconfig, tconfig).cuda()
         model = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=self.config.lr,
-            weight_decay=0.0,
-            amsgrad=True,
+            model.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
         )
-        batch_iter = iter(self.train_loader)
         begin = time.time()
 
         for iteration in range(self.config.max_iters):
@@ -121,17 +120,19 @@ class Trainer:
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr
 
-            logits_image, logits_text, loss = self.train_loop(model, optimizer, batch_iter)
+            logits_image, logits_text, loss = self.train_loop(model, optimizer)
 
             if iteration % self.config.log_iters == 0:
                 _, predict = torch.max(logits_image, dim=-1)
-                correct = (predict == self.correct_labels)
+                correct = predict == self.correct_labels
                 accuracy = correct.sum().item() / correct.size(0)
                 now = time.time()
                 duration = now - begin
                 begin = now
                 epoch = iteration // len(self.train_loader)
-                print(f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}")
+                print(
+                    f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
+                )
             if iteration % self.config.eval_iters == 0:
                 print("eval")
 
