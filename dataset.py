@@ -19,7 +19,7 @@ class CC3MList:
             file_name = txt_name[:-4]
             pair_list.append((file_name + ".jpg", txt_name))
         self.pair_list = pair_list
-        self.div = int(len(pair_list) * (1 - eval_ratio))
+        self.div = int(len(self.pair_list) * (1 - eval_ratio))
 
     def to_train_list(self):
         return self.pair_list[: self.div]
@@ -44,7 +44,7 @@ class CC3MDataset(data.Dataset):
         length = len(ids)
         if length > self.seq_len:
             ids = ids[: self.seq_len]
-            print("ids:", ids, txt_name)
+            print("Error ids:", ids, txt_name)
         elif length < self.seq_len:
             ids = np.pad(ids, (0, (self.seq_len - length)), "constant")
         imgs = image.astype("float32") / 255.0

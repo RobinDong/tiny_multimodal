@@ -13,7 +13,7 @@ from model import ImageConfig, GPTConfig, CLIP
 class TrainConfig:
     data_path: str = "/home/robin/Downloads/CC3M"
     eval_ratio: float = 0.1
-    batch_size: int = 128
+    batch_size: int = 64
     num_workers: int = 4
     resume: bool = False
     lr: float = 1e-4
@@ -36,7 +36,6 @@ class Trainer:
         self.ctx = torch.amp.autocast(
             device_type=self.device_type, dtype=torch.bfloat16
         )
-        self.correct_labels = torch.arange(config.batch_size, device=self.device_type)
 
         # prepare dataset
         lst = CC3MList(config.data_path, 0.1)
@@ -103,15 +102,44 @@ class Trainer:
         coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))  # coeff ranges 0..1
         return config.min_lr + coeff * (config.lr - config.min_lr)
 
+    @torch.no_grad()
+    def evaluate(self, model):
+        model.eval()
+
+        total_loss = 0.0
+        batch_iter = iter(self.eval_loader)
+        sum_accuracy = 0
+        length = len(self.eval_loader)
+        for iteration in range(length):
+            images, texts = next(batch_iter)
+            images = images.cuda().permute(0, 3, 1, 2)
+            texts = texts.cuda()
+            # forward
+            with self.ctx:
+                logits_image, logits_text, loss = model((images, texts))
+            # accuracy
+            _, predict = torch.max(logits_image, dim=-1)
+            correct_labels = torch.arange(logits_image.size(0), device=self.device_type)
+            correct = predict == correct_labels
+            sum_accuracy += correct.sum().item() / correct.size(0)
+            # loss
+            total_loss += loss.item()
+
+        model.train()
+        return total_loss / length, sum_accuracy / length
+
     def train(self):
         iconfig = ImageConfig()
         tconfig = GPTConfig()
         tconfig.seq_len = self.config.seq_len
 
         model = CLIP(iconfig, tconfig).cuda()
-        model = torch.compile(model)
+        # model = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            model.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
+            model.parameters(),
+            lr=self.config.lr,
+            weight_decay=0.0,
+            amsgrad=True,
         )
         begin = time.time()
 
@@ -122,9 +150,10 @@ class Trainer:
 
             logits_image, logits_text, loss = self.train_loop(model, optimizer)
 
-            if iteration % self.config.log_iters == 0:
+            if iteration % self.config.log_iters == 0 and iteration > 0:
                 _, predict = torch.max(logits_image, dim=-1)
-                correct = predict == self.correct_labels
+                correct_labels = torch.arange(logits_image.size(0), device=self.device_type)
+                correct = predict == correct_labels
                 accuracy = correct.sum().item() / correct.size(0)
                 now = time.time()
                 duration = now - begin
@@ -133,8 +162,9 @@ class Trainer:
                 print(
                     f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
                 )
-            if iteration % self.config.eval_iters == 0:
-                print("eval")
+            if iteration % self.config.eval_iters == 0 and iteration > 0:
+                avg_loss, avg_accu = self.evaluate(model)
+                print(f"[Eval] loss: {avg_loss:.4f} accuracy: {avg_accu:.4f}")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 sys.path.append("../")
 from GPT.model import GPTConfig, GPT
 
-clip_n_embd = 1024
+clip_n_embd = 512
 
 
 @dataclass
@@ -89,7 +89,7 @@ class CLIP(nn.Module):
         logits_per_image = img_embds @ txt_embds.T
         logits_per_text = txt_embds @ img_embds.T
 
-        labels = torch.arange(images.size(0), device=images.device)
+        labels = torch.arange(logits_per_image.size(0), device=images.device)
         #loss = F.cross_entropy(logits_per_image, labels)
         loss = (
             F.cross_entropy(logits_per_image, labels)
