@@ -1,5 +1,7 @@
+import os
 import time
 import math
+import argparse
 import torch
 import torch.utils.data as data
 
@@ -20,11 +22,14 @@ class TrainConfig:
     min_lr: float = 1e-6
     grad_clip: float = 100.0
     seq_len: int = 64
-    log_iters: int = 1000
+    log_iters: int = 2000
     eval_iters: int = 10000
     warmup_iters: int = 2000
     lr_decay_iters: int = 128000
     max_iters: int = 1000000
+
+
+ckpt_dir = "out"
 
 
 class Trainer:
@@ -128,19 +133,22 @@ class Trainer:
         model.train()
         return total_loss / length, sum_accuracy / length
 
-    def train(self):
+    def train(self, args):
         iconfig = ImageConfig()
         tconfig = GPTConfig()
         tconfig.seq_len = self.config.seq_len
 
-        model = CLIP(iconfig, tconfig).cuda()
+        if args.resume:
+            checkpoint = torch.load(args.resume, map_location=self.device_type)
+            self.config = checkpoint["config"]
+            model = checkpoint["model"]
+        else:
+            model = CLIP(iconfig, tconfig).cuda()
         # model = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=self.config.lr,
-            weight_decay=0.0,
-            amsgrad=True,
+            model.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
         )
+        best_val_accuracy = 1e-9
         begin = time.time()
 
         for iteration in range(self.config.max_iters):
@@ -152,7 +160,9 @@ class Trainer:
 
             if iteration % self.config.log_iters == 0 and iteration > 0:
                 _, predict = torch.max(logits_image, dim=-1)
-                correct_labels = torch.arange(logits_image.size(0), device=self.device_type)
+                correct_labels = torch.arange(
+                    logits_image.size(0), device=self.device_type
+                )
                 correct = predict == correct_labels
                 accuracy = correct.sum().item() / correct.size(0)
                 now = time.time()
@@ -163,11 +173,28 @@ class Trainer:
                     f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
                 )
             if iteration % self.config.eval_iters == 0 and iteration > 0:
-                avg_loss, avg_accu = self.evaluate(model)
-                print(f"[Eval] loss: {avg_loss:.4f} accuracy: {avg_accu:.4f}")
+                avg_loss, avg_accuracy = self.evaluate(model)
+                if avg_accuracy > best_val_accuracy:
+                    checkpoint = {
+                        "model": model,
+                        "eval_accuracy": avg_accuracy,
+                    }
+                    torch.save(
+                        checkpoint, os.path.join(ckpt_dir, f"clip_{iteration}.pt")
+                    )
+                print(f"[Eval] loss: {avg_loss:.4f} accuracy: {avg_accuracy:.4f}")
 
 
 if __name__ == "__main__":
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.enabled = True
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--resume", default="", type=str, help="Resume from a saved checkpoint"
+    )
+    args = parser.parse_args()
+
     config = TrainConfig()
     trainer = Trainer(config)
-    trainer.train()
+    trainer.train(args)
