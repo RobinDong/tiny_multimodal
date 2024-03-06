@@ -15,7 +15,7 @@ from model import ImageConfig, GPTConfig, CLIP
 class TrainConfig:
     data_path: str = "/home/robin/Downloads/CC3M"
     eval_ratio: float = 0.1
-    batch_size: int = 64
+    batch_size: int = 128
     num_workers: int = 4
     resume: bool = False
     lr: float = 1e-4
@@ -58,7 +58,7 @@ class Trainer:
 
         self.eval_loader = data.DataLoader(
             eval_ds,
-            config.batch_size // 8,
+            config.batch_size,
             num_workers=config.num_workers,
             shuffle=False,
             pin_memory=True,
@@ -115,7 +115,7 @@ class Trainer:
         batch_iter = iter(self.eval_loader)
         sum_accuracy = 0
         length = len(self.eval_loader)
-        for iteration in range(length):
+        for iteration in range(length - 1):
             images, texts = next(batch_iter)
             images = images.cuda().permute(0, 3, 1, 2)
             texts = texts.cuda()
@@ -140,13 +140,15 @@ class Trainer:
 
         if args.resume:
             checkpoint = torch.load(args.resume, map_location=self.device_type)
-            self.config = checkpoint["config"]
             model = checkpoint["model"]
         else:
             model = CLIP(iconfig, tconfig).cuda()
-        # model = torch.compile(model)
+        cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            model.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
+            cmodel.parameters(),
+            lr=self.config.lr,
+            weight_decay=0.0,
+            amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
@@ -156,7 +158,7 @@ class Trainer:
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr
 
-            logits_image, logits_text, loss = self.train_loop(model, optimizer)
+            logits_image, logits_text, loss = self.train_loop(cmodel, optimizer)
 
             if iteration % self.config.log_iters == 0 and iteration > 0:
                 _, predict = torch.max(logits_image, dim=-1)
@@ -173,7 +175,7 @@ class Trainer:
                     f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
                 )
             if iteration % self.config.eval_iters == 0 and iteration > 0:
-                avg_loss, avg_accuracy = self.evaluate(model)
+                avg_loss, avg_accuracy = self.evaluate(cmodel)
                 if avg_accuracy > best_val_accuracy:
                     checkpoint = {
                         "model": model,
