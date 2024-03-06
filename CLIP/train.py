@@ -56,7 +56,7 @@ class Trainer:
         )
         self.batch_iter = iter(self.train_loader)
 
-        self.eval_loader = data.DataLoader(
+        self.val_loader = data.DataLoader(
             eval_ds,
             config.batch_size,
             num_workers=config.num_workers,
@@ -108,13 +108,13 @@ class Trainer:
         return config.min_lr + coeff * (config.lr - config.min_lr)
 
     @torch.no_grad()
-    def evaluate(self, model):
+    def validate(self, model):
         model.eval()
 
         total_loss = 0.0
-        batch_iter = iter(self.eval_loader)
+        batch_iter = iter(self.val_loader)
         sum_accuracy = 0
-        length = len(self.eval_loader)
+        length = len(self.val_loader)
         for iteration in range(length - 1):
             images, texts = next(batch_iter)
             images = images.cuda().permute(0, 3, 1, 2)
@@ -175,7 +175,7 @@ class Trainer:
                     f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
                 )
             if iteration % self.config.eval_iters == 0 and iteration > 0:
-                avg_loss, avg_accuracy = self.evaluate(cmodel)
+                avg_loss, avg_accuracy = self.validate(cmodel)
                 if avg_accuracy > best_val_accuracy:
                     checkpoint = {
                         "model": model,
