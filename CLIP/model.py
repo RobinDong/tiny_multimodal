@@ -59,7 +59,7 @@ class TextEncoder(nn.Module):
 
     def forward(self, inp):
         out = self.encoder(inp)
-        out = out[:,-1,:]
+        out = out[:, -1, :]
         # out = out.contiguous().view(inp.size(0), -1)
         return self.txt_proj(out)
 
@@ -82,15 +82,14 @@ class CLIP(nn.Module):
         txt_f = self.txt_encoder(txts)
         img_embds = img_f
         txt_embds = txt_f
-        #img_embds = F.normalize(img_f, p=2, dim=1)  # (B, E)
-        #txt_embds = F.normalize(txt_f, p=2, dim=1)  # (B, E)
+        # img_embds = F.normalize(img_f, p=2, dim=1)  # (B, E)
+        # txt_embds = F.normalize(txt_f, p=2, dim=1)  # (B, E)
 
         # mainly learned from https://github.com/openai/CLIP/blob/main/clip/model.py
         logits_per_image = img_embds @ txt_embds.T
-        logits_per_text = txt_embds @ img_embds.T
+        logits_per_text = logits_per_image.T
 
         labels = torch.arange(logits_per_image.size(0), device=images.device)
-        #loss = F.cross_entropy(logits_per_image, labels)
         loss = (
             F.cross_entropy(logits_per_image, labels)
             + F.cross_entropy(logits_per_text, labels)

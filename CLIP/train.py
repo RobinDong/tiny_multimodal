@@ -25,7 +25,7 @@ class TrainConfig:
     log_iters: int = 2000
     eval_iters: int = 10000
     warmup_iters: int = 2000
-    lr_decay_iters: int = 128000
+    lr_decay_iters: int = 256000
     max_iters: int = 1000000
 
 
