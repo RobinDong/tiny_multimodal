@@ -2,13 +2,14 @@ import os
 import time
 import math
 import argparse
-import torch
-import torch.utils.data as data
 
 from dataclasses import dataclass
 
-from dataset import CC3MList, CC3MDataset
+import torch
+
+from torch.utils import data
 from model import ImageConfig, GPTConfig, CLIP
+from dataset import CC3MList, CC3MDataset
 
 
 @dataclass
@@ -72,8 +73,6 @@ class Trainer:
         except StopIteration:
             self.batch_iter = iter(self.train_loader)
             images, texts = next(self.batch_iter)
-        except Exception as ex:
-            print("Loading data exception:", ex)
 
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
@@ -114,13 +113,13 @@ class Trainer:
         batch_iter = iter(self.val_loader)
         sum_accuracy = 0
         length = len(self.val_loader)
-        for iteration in range(length - 1):
+        for _ in range(length - 1):
             images, texts = next(batch_iter)
             images = images.cuda().permute(0, 3, 1, 2)
             texts = texts.cuda()
             # forward
             with self.ctx:
-                logits_image, logits_text, loss = model((images, texts))
+                logits_image, _, loss = model((images, texts))
             # accuracy
             _, predict = torch.max(logits_image, dim=-1)
             correct_labels = torch.arange(logits_image.size(0), device=self.device_type)
@@ -154,7 +153,7 @@ class Trainer:
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr
 
-            logits_image, logits_text, loss = self.train_loop(cmodel, optimizer)
+            logits_image, _, loss = self.train_loop(cmodel, optimizer)
 
             if iteration % self.config.log_iters == 0 and iteration > 0:
                 _, predict = torch.max(logits_image, dim=-1)
