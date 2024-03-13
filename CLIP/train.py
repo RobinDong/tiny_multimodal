@@ -13,15 +13,14 @@ from model import ImageConfig, GPTConfig, CLIP
 
 @dataclass
 class TrainConfig:
-    data_path: str = "/home/robin/Downloads/CC3M"
+    data_path: tuple = ("/home/robin/Downloads/CC3M", "/home/robin/Downloads/cc12m")
     eval_ratio: float = 0.1
     batch_size: int = 128
-    num_workers: int = 4
-    resume: bool = False
-    lr: float = 1e-4
+    num_workers: int = 2
+    lr: float = 1e-5
     min_lr: float = 1e-6
-    grad_clip: float = 100.0
-    seq_len: int = 64
+    grad_clip: float = 0.01
+    seq_len: int = 128
     log_iters: int = 2000
     eval_iters: int = 10000
     warmup_iters: int = 2000
@@ -145,10 +144,7 @@ class Trainer:
             model = CLIP(iconfig, tconfig).cuda()
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            cmodel.parameters(),
-            lr=self.config.lr,
-            weight_decay=0.0,
-            amsgrad=True,
+            cmodel.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
@@ -172,7 +168,8 @@ class Trainer:
                 begin = now
                 epoch = iteration // len(self.train_loader)
                 print(
-                    f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
+                    f"""[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f}
+                    accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"""
                 )
             if iteration % self.config.eval_iters == 0 and iteration > 0:
                 avg_loss, avg_accuracy = self.validate(cmodel)

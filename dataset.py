@@ -1,3 +1,4 @@
+import os
 import cv2
 import glob
 import tiktoken
@@ -7,18 +8,24 @@ import torch.utils.data as data
 
 
 class CC3MList:
-    def __init__(self, path, eval_ratio):
+    def __init__(self, pathes, eval_ratio):
         pair_list = []
         # list all jpg/txt files
-        lst = glob.glob(f"{path}/*.txt")
+        lst = []
+        for path in pathes:
+            lst += glob.glob(f"{path}/*.txt")
+        np.random.shuffle(lst)
         for txt_name in lst:
             if txt_name.endswith(
                 "000007279.txt"
             ):  # The "000007279.txt" contains float numbers, which is not suitable
                 continue
             file_name = txt_name[:-4]
-            pair_list.append((file_name + ".jpg", txt_name))
+            img_name = file_name + ".jpg"
+            if os.path.exists(img_name):
+                pair_list.append((img_name, txt_name))
         self.pair_list = pair_list
+        print("Dataset size:", len(pair_list))
         self.div = int(len(self.pair_list) * (1 - eval_ratio))
 
     def to_train_list(self):
@@ -41,10 +48,10 @@ class CC3MDataset(data.Dataset):
         with open(txt_name, "r") as fp:
             txt = fp.read()
         ids = self.enc.encode_ordinary(txt)
+        ids = np.array(ids, dtype=np.int64)
         length = len(ids)
         if length > self.seq_len:
             ids = ids[: self.seq_len]
-            print("Error ids:", ids, txt_name)
         elif length < self.seq_len:
             ids = np.pad(ids, (0, (self.seq_len - length)), "constant")
         imgs = image.astype("float32") / 255.0
