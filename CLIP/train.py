@@ -15,7 +15,7 @@ from dataset import CC3MList, CC3MDataset
 @dataclass
 class TrainConfig:
     data_path: tuple = ("/home/robin/Downloads/CC3M", "/home/robin/Downloads/cc12m")
-    eval_ratio: float = 0.1
+    eval_ratio: float = 0.05
     batch_size: int = 128
     num_workers: int = 2
     lr: float = 1e-5
@@ -23,7 +23,7 @@ class TrainConfig:
     grad_clip: float = 0.01
     seq_len: int = 128
     log_iters: int = 2000
-    eval_iters: int = 10000
+    eval_iters: int = 20000
     warmup_iters: int = 2000
     lr_decay_iters: int = 256000
     max_iters: int = 1000000
@@ -43,7 +43,7 @@ class Trainer:
         )
 
         # prepare dataset
-        lst = CC3MList(config.data_path, 0.1)
+        lst = CC3MList(config.data_path, config.eval_ratio)
         train_ds = CC3MDataset(lst.to_train_list(), config.seq_len)
         eval_ds = CC3MDataset(lst.to_eval_list(), config.seq_len)
 
@@ -143,7 +143,10 @@ class Trainer:
             model = CLIP(iconfig, tconfig).cuda()
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            cmodel.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
+            cmodel.parameters(),
+            lr=self.config.lr,
+            weight_decay=0.0,
+            amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
@@ -167,8 +170,10 @@ class Trainer:
                 begin = now
                 epoch = iteration // len(self.train_loader)
                 print(
-                    f"""[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f}
-                    accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"""
+                    (
+                        f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} "
+                        f"accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
+                    )
                 )
             if iteration % self.config.eval_iters == 0 and iteration > 0:
                 avg_loss, avg_accuracy = self.validate(cmodel)
