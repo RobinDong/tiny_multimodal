@@ -6,6 +6,7 @@ import torch
 
 from dataclasses import dataclass
 from CLIP.provider import CLIPProvider
+from MLM.provider import MLMProvider
 
 
 @dataclass
@@ -40,6 +41,8 @@ class Trainer:
 
         if args.provider == "CLIP":
             self.train_provider = CLIPProvider(config)
+        elif args.provider == "MLM":
+            self.train_provider = MLMProvider(config)
 
     def train_loop(self, model, optimizer):
         train_result = self.train_provider.train_step(model, self.ctx)

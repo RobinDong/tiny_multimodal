@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from tqdm import tqdm
-from CLIP.train import TrainConfig
+from train import TrainConfig
 
 
 class Imagenet1K:
