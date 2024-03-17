@@ -1,11 +1,12 @@
 import math
+from dataclasses import dataclass
 
 import torch
-import torch.nn as nn
-
+from torch import nn
 from torch.nn import functional as F
 
 
+@dataclass
 class GPTConfig:
     vocab_size: int = 50304
     seq_len: int = 64
@@ -124,12 +125,13 @@ class GPT(nn.Module):
                     pa, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer)
                 )
 
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear) or isinstance(module, nn.Embedding):
+    @staticmethod
+    def _init_weights(module):
+        if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, idx):
-        batch_size, seq_len = idx.size()
+        _, seq_len = idx.size()
 
         pos = torch.arange(0, seq_len, dtype=torch.long, device=idx.device)
 

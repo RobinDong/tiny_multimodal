@@ -1,4 +1,4 @@
 [design]
 max-locals = 25
-disable = missing-docstring, invalid-name, redefined-outer-name, too-many-instance-attributes, import-error
+disable = missing-docstring, invalid-name, redefined-outer-name, too-many-instance-attributes, import-error, too-few-public-methods
 init-hook = 'import sys; sys.path.append("CLIP"); sys.path.append(".")'
