@@ -1,13 +1,12 @@
-import cv2
 import glob
 import argparse
+import cv2
 import tiktoken
 import numpy as np
 
 import torch
 
 from tqdm import tqdm
-from train import TrainConfig
 
 
 class Imagenet1K:
@@ -20,18 +19,18 @@ class Imagenet1K:
     def __init__(self, model):
         self.id_to_index = {}
         self.cats = {}
-        with open(self.map_file_path, "r") as fp:
+        with open(self.map_file_path, "r", encoding="utf-8") as fp:
             for line in fp.readlines():
-                id, index, name = line.split(" ")
+                _id, index, name = line.split(" ")
                 index = int(index)
                 self.cats[index] = name.replace("_", " ")
-                self.id_to_index[id] = index - 1
+                self.id_to_index[_id] = index - 1
 
         self.images = {}
         img_lst = glob.glob(f"{self.image_path}/*.JPEG")
         for image_name in img_lst:
-            id = image_name.split(".")[0].split("_")[-1]
-            self.images[image_name] = self.id_to_index[id]
+            _id = image_name.split(".")[0].split("_")[-1]
+            self.images[image_name] = self.id_to_index[_id]
 
         self.model = model
         # embedings of all categories
@@ -59,8 +58,8 @@ class Imagenet1K:
             image = torch.tensor(image).unsqueeze(0).permute(0, 3, 1, 2)
             image_embd = self.model.img_encoder(image)
             logits_per_image = image_embd @ self.cat_embds.T
-            #_, _max = torch.max(logits_per_image, dim=-1)
-            #if _max.item() == correct_index:
+            # _, _max = torch.max(logits_per_image, dim=-1)
+            # if _max.item() == correct_index:
             _, indices = torch.topk(logits_per_image, 5, dim=-1)
             top5 = set(indices.tolist()[0])
             if correct_index in top5:

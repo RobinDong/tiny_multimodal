@@ -1,13 +1,10 @@
-import sys
-import timm
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-
 from dataclasses import dataclass
 
-sys.path.append("../")
+import timm
+import torch
+from torch import nn
+import torch.nn.functional as F
+
 from GPT.model import GPTConfig, GPT
 
 clip_n_embd = 512

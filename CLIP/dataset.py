@@ -1,10 +1,10 @@
 import os
-import cv2
 import glob
+import cv2
 import tiktoken
 
 import numpy as np
-import torch.utils.data as data
+from torch.utils import data
 
 
 class CC3MList:
@@ -45,7 +45,7 @@ class CC3MDataset(data.Dataset):
         image_name, txt_name = self.pair_list[index]
 
         image = cv2.imread(image_name)
-        with open(txt_name, "r") as fp:
+        with open(txt_name, "r", encoding="utf-8") as fp:
             txt = fp.read()
         ids = self.enc.encode_ordinary(txt)
         ids = np.array(ids, dtype=np.int64)
@@ -63,7 +63,7 @@ class CC3MDataset(data.Dataset):
 
 if __name__ == "__main__":
     lst = CC3MList("/home/robin/Downloads/CC3M", 0.1)
-    ds = CC3MDataset(lst.to_eval_list())
+    ds = CC3MDataset(lst.to_eval_list(), 64)
     image, txt = ds[123]
     print(image)
     print(txt)
