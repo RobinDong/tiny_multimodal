@@ -29,18 +29,16 @@ class ImageEncoder(nn.Module):
             drop_rate=config.image_dropout,
             drop_path_rate=config.image_dropout,
         )
-        layers = list(base_model.children())[:-2]
+        layers = list(base_model.children())
+        layers[-1].fc = nn.Linear(layers[-1].fc.in_features, clip_n_embd)
         self.encoder = nn.Sequential(*layers)
-        self.image_proj = nn.Linear(40960, clip_n_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
         return n_params
 
     def forward(self, inp):
-        out = self.encoder(inp)
-        out = out.contiguous().view(inp.size(0), -1)
-        return self.image_proj(out)
+        return self.encoder(inp)
 
 
 class TextEncoder(nn.Module):
