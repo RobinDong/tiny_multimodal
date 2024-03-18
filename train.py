@@ -2,9 +2,10 @@ import os
 import time
 import math
 import argparse
-import torch
-
 from dataclasses import dataclass
+
+import torch
+from torch.utils import data
 from CLIP.provider import CLIPProvider
 from MLM.provider import MLMProvider
 
@@ -43,9 +44,37 @@ class Trainer:
             self.train_provider = CLIPProvider(config)
         elif args.provider == "MLM":
             self.train_provider = MLMProvider(config)
+            config.batch_size = 64
+
+        train_ds, eval_ds = self.train_provider.get_datasets(config)
+        self.train_loader = data.DataLoader(
+            train_ds,
+            config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=True,
+            pin_memory=True,
+        )
+        self.train_batch_iter = iter(self.train_loader)
+
+        self.val_loader = data.DataLoader(
+            eval_ds,
+            config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=False,
+            pin_memory=True,
+        )
 
     def train_loop(self, model, optimizer):
-        train_result = self.train_provider.train_step(model, self.ctx)
+        try:
+            data_entry = next(self.train_batch_iter)
+            if len(data_entry[0]) < self.config.batch_size:
+                self.train_batch_iter = iter(self.train_loader)
+                data_entry = next(self.train_batch_iter)
+        except StopIteration:
+            self.train_batch_iter = iter(self.train_loader)
+            data_entry = next(self.train_batch_iter)
+
+        train_result = self.train_provider.train_step(model, data_entry, self.ctx)
         loss = train_result[-1]
 
         self.scaler.scale(loss).backward()
@@ -76,9 +105,22 @@ class Trainer:
     @torch.no_grad()
     def validate(self, model):
         model.eval()
-        avg_loss, avg_accuracy = self.train_provider.validate(
-            model, self.ctx, self.device_type
-        )
+
+        total_loss = 0.0
+        batch_iter = iter(self.val_loader)
+        sum_accuracy = 0
+        length = len(self.val_loader)
+        for _ in range(length - 1):
+            data_entry = next(batch_iter)
+            accuracy, loss = self.train_provider.get_validate_accuracy(
+                data_entry, model, self.ctx, self.device_type
+            )
+            sum_accuracy += accuracy
+            total_loss += loss
+
+        avg_loss = total_loss / length
+        avg_accuracy = sum_accuracy / length
+
         model.train()
         return avg_loss, avg_accuracy
 
@@ -107,7 +149,7 @@ class Trainer:
 
             if iteration % self.config.log_iters == 0 and iteration > 0:
                 epoch, accuracy, loss = self.train_provider.get_metrics(
-                    train_result, self.device_type, iteration
+                    train_result, self.device_type, iteration, self.train_loader
                 )
                 now = time.time()
                 duration = now - begin
