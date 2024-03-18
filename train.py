@@ -35,7 +35,8 @@ class Trainer:
         self.config = config
         self.device_type = "cuda"
         self.dtype = "bfloat16"
-        self.scaler = torch.cuda.amp.GradScaler(enabled=(self.dtype == "float16"))
+        enabled = self.dtype == "bfloat16"
+        self.scaler = torch.cuda.amp.GradScaler(enabled=enabled)
         self.ctx = torch.amp.autocast(
             device_type=self.device_type, dtype=torch.bfloat16
         )
