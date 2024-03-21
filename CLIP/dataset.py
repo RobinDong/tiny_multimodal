@@ -1,4 +1,3 @@
-import os
 import glob
 import cv2
 import tiktoken
@@ -8,46 +7,57 @@ from torch.utils import data
 
 
 class CC3MList:
-    def __init__(self, pathes, eval_ratio):
-        pair_list = []
-        # list all jpg/txt files
-        lst = []
-        for path in pathes:
-            lst += glob.glob(f"{path}/*.txt")
-        np.random.shuffle(lst)
-        for txt_name in lst:
-            if txt_name.endswith(
-                "000007279.txt"
-            ):  # The "000007279.txt" contains float numbers, which is not suitable
-                continue
-            file_name = txt_name[:-4]
-            img_name = file_name + ".jpg"
-            if os.path.exists(img_name):
-                pair_list.append((img_name, txt_name))
-        self.pair_list = pair_list
-        print("Dataset size:", len(pair_list))
-        self.div = int(len(self.pair_list) * (1 - eval_ratio))
+    def __init__(self, path, eval_ratio):
+        # list all index(.npy) files
+        lst = glob.glob(f"{path}/*.npy")
+        filename_to_id = {}
+        self._id_to_filename = {}
+        fid = 0
+        self.indexes = []
+        for index_file in lst:
+            index = np.load(index_file)
+            filename = index_file[:-4]
+            if filename not in filename_to_id:
+                file_id = fid
+                filename_to_id[filename] = file_id
+                self._id_to_filename[file_id] = filename
+                fid += 1
+            else:
+                file_id = filename_to_id[filename]
+            for item in index:
+                self.indexes.append((item, file_id))
+        print("Dataset size:", len(self.indexes))
+        self.div = int(len(self.indexes) * (1 - eval_ratio))
 
     def to_train_list(self):
-        return self.pair_list[: self.div]
+        return self.indexes[: self.div]
 
     def to_eval_list(self):
-        return self.pair_list[self.div :]
+        return self.indexes[self.div :]
+
+    @property
+    def id_to_filename(self):
+        return self._id_to_filename
 
 
 class CC3MDataset(data.Dataset):
-    def __init__(self, lst, seq_len):
-        self.pair_list = lst
+    def __init__(self, id_to_filename, lst, seq_len):
+        self.id_to_filename = id_to_filename
+        self.indexes = lst
         self.seq_len = seq_len
         self.enc = tiktoken.get_encoding("gpt2")
 
     def __getitem__(self, index):
-        image_name, txt_name = self.pair_list[index]
+        img_offset, img_size, txt_offset, txt_size = self.indexes[index][0]
+        filename = self.id_to_filename[self.indexes[index][1]]
+        with open(filename + ".dat", "rb") as fp:
+            fp.seek(img_offset)
+            raw_image = np.asarray(bytearray(fp.read(img_size)), dtype="uint8")
+            image = cv2.imdecode(raw_image, cv2.IMREAD_COLOR)
+            fp.seek(txt_offset)
+            text = fp.read(txt_size).decode("utf-8")
 
-        image = cv2.imread(image_name)
-        with open(txt_name, "r", encoding="utf-8") as fp:
-            txt = fp.read()
-        ids = self.enc.encode_ordinary(txt)
+        ids = self.enc.encode_ordinary(text)
         ids = np.array(ids, dtype=np.int64)
         length = len(ids)
         if length > self.seq_len:
@@ -58,12 +68,13 @@ class CC3MDataset(data.Dataset):
         return imgs, ids
 
     def __len__(self):
-        return len(self.pair_list)
+        return len(self.indexes)
 
 
 if __name__ == "__main__":
-    lst = CC3MList("/home/robin/Downloads/CC3M", 0.1)
-    ds = CC3MDataset(lst.to_eval_list(), 64)
-    image, txt = ds[123]
-    print(image)
-    print(txt)
+    lst = CC3MList("/home/robin/Downloads/cc12m", 0.1)
+    ds = CC3MDataset(lst.id_to_filename, lst.to_eval_list(), 64)
+    length = len(ds)
+    for index in range(length):
+        image, txt = ds[index]
+        print(txt.shape, txt)

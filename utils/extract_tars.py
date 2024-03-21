@@ -1,19 +1,20 @@
 import glob
 import tarfile
 from multiprocessing import Pool
+from collections import defaultdict
 
 import cv2
 import numpy as np
 
 
-n_jobs = 12
+n_jobs = 2
 input_path = "/mnt/backup_3080ti/cc12m/"
 output_path = "/home/robin/Downloads/cc12m/"
 image_size = (256, 256)
 
 
 def task(tar_filename):
-    drop_list = set()
+    mapping = defaultdict(dict)  # filename -> {"img" -> image-bytes, "txt" -> text-bytes}
     try:
         with tarfile.open(tar_filename) as tarf:
             for member in tarf.getmembers():
@@ -23,20 +24,36 @@ def task(tar_filename):
                     try:
                         text = content.decode("ascii")
                     except UnicodeDecodeError:
-                        drop_list.add(member.name[:-4])
                         continue
-                    with open(output_path + member.name, "w", encoding="utf-8") as fp:
-                        fp.write(text)
+                    mapping[member.name[:-4]]["txt"] = text.encode("utf-8")
                 if member.name.endswith(".jpg"):
-                    if member.name[:-4] in drop_list:
-                        continue
                     image_fp = tarf.extractfile(member)
                     image_content = np.asarray(
                         bytearray(image_fp.read()), dtype="uint8"
                     )
                     image = cv2.imdecode(image_content, cv2.IMREAD_COLOR)
                     image = cv2.resize(image, image_size)
-                    cv2.imwrite(output_path + member.name, image)
+                    success, img_bytes = cv2.imencode(".jpg", image)
+                    if not success:
+                        continue
+                    mapping[member.name[:-4]]["img"] = img_bytes
+        file_index = []
+        offset = 0
+        new_filename = output_path + tar_filename.split("/")[-1][:-4]
+        data_filename = new_filename + ".dat"
+        index_filename = new_filename + ".npy"
+        with open(data_filename, "wb") as fp:
+            for value in mapping.values():
+                if len(value) != 2:
+                    continue
+                imgb, txtb = value["img"], value["txt"]
+                fp.write(imgb)
+                fp.write(txtb)
+                file_index.append([offset, len(imgb), offset + len(imgb), len(txtb)])
+                offset += len(imgb) + len(txtb)
+        with open(index_filename, "wb") as fp:
+            np.save(fp, np.asarray(file_index))
+
     except OSError as ex:
         print("Exception:", ex)
         print("Failed filename:", tar_filename)

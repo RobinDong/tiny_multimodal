@@ -12,8 +12,8 @@ class CLIPProvider:
     def get_datasets(config):
         # prepare dataset
         lst = CC3MList(config.data_path, config.eval_ratio)
-        train_ds = CC3MDataset(lst.to_train_list(), config.seq_len)
-        eval_ds = CC3MDataset(lst.to_eval_list(), config.seq_len)
+        train_ds = CC3MDataset(lst.id_to_filename, lst.to_train_list(), config.seq_len)
+        eval_ds = CC3MDataset(lst.id_to_filename, lst.to_eval_list(), config.seq_len)
         return train_ds, eval_ds
 
     @staticmethod
