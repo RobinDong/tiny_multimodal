@@ -42,10 +42,11 @@ class Imagenet1K:
             ids = enc.encode_ordinary(text)
             ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
             ids = torch.tensor(ids).unsqueeze(0)
-            cat_embds.append(self.model.txt_encoder(ids))
+            with torch.no_grad():
+                cat_embds.append(self.model.txt_encoder(ids))
         self.cat_embds = torch.cat(cat_embds, dim=0)
 
-    def evaludate(self):
+    def evaluate(self):
         correct = 0
         processed = 0
         idx = 0
@@ -56,7 +57,8 @@ class Imagenet1K:
                 / 255.0
             )
             image = torch.tensor(image).unsqueeze(0).permute(0, 3, 1, 2)
-            image_embd = self.model.img_encoder(image)
+            with torch.no_grad():
+                image_embd = self.model.img_encoder(image)
             logits_per_image = image_embd @ self.cat_embds.T
             # _, _max = torch.max(logits_per_image, dim=-1)
             # if _max.item() == correct_index:
@@ -83,7 +85,7 @@ class Evaluator:
         self.dataset = self.class_map[dataset](model)
 
     def evaluate(self):
-        self.dataset.evaludate()
+        self.dataset.evaluate()
 
 
 if __name__ == "__main__":
