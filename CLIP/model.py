@@ -13,7 +13,7 @@ clip_n_embd = 512
 
 @dataclass
 class ImageConfig:
-    image_encoder_name: str = "convnextv2_nano"
+    image_encoder_name: str = "convnextv2_tiny"
     image_dropout: float = 0.0
 
 
@@ -76,10 +76,8 @@ class CLIP(nn.Module):
         images, txts = inp
         img_f = self.img_encoder(images)
         txt_f = self.txt_encoder(txts)
-        img_embds = img_f
-        txt_embds = txt_f
-        # img_embds = F.normalize(img_f, p=2, dim=1)  # (B, E)
-        # txt_embds = F.normalize(txt_f, p=2, dim=1)  # (B, E)
+        img_embds = F.normalize(img_f, dim=-1)  # (B, E)
+        txt_embds = F.normalize(txt_f, dim=-1)  # (B, E)
 
         # mainly learned from https://github.com/openai/CLIP/blob/main/clip/model.py
         logits_per_image = self.logit_scale.exp() * img_embds @ txt_embds.T

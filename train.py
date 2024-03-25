@@ -8,22 +8,23 @@ import torch
 from torch.utils import data
 from CLIP.provider import CLIPProvider
 from MLM.provider import MLMProvider
+from ALBEF.provider import ALBEFProvider
 
 
 @dataclass
 class TrainConfig:
     data_path: tuple = "/home/robin/Downloads/cc12m"
     eval_ratio: float = 0.05
-    batch_size: int = 128
+    batch_size: int = 64
     num_workers: int = 2
-    lr: float = 1e-5
+    lr: float = 1e-4
     min_lr: float = 1e-6
-    grad_clip: float = 0.01
-    seq_len: int = 128
+    grad_clip: float = 1.0
+    seq_len: int = 64
     log_iters: int = 2000
     eval_iters: int = 20000
     warmup_iters: int = 2000
-    lr_decay_iters: int = 256000
+    lr_decay_iters: int = 512000
     max_iters: int = 1000000
 
 
@@ -44,8 +45,11 @@ class Trainer:
         if args.provider == "CLIP":
             self.train_provider = CLIPProvider(config)
         elif args.provider == "MLM":
-            self.train_provider = MLMProvider(config)
             config.batch_size = 64
+            self.train_provider = MLMProvider(config)
+        elif args.provider == "ALBEF":
+            config.batch_size = 64
+            self.train_provider = ALBEFProvider(config)
 
         train_ds, eval_ds = self.train_provider.get_datasets(config)
         self.train_loader = data.DataLoader(
@@ -187,7 +191,7 @@ if __name__ == "__main__":
         default="CLIP",
         type=str,
         help="Model to be trained",
-        choices=["CLIP", "MLM"],
+        choices=["CLIP", "MLM", "ALBEF"],
     )
     args = parser.parse_args()
 
