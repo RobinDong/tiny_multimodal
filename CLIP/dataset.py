@@ -7,9 +7,11 @@ from torch.utils import data
 
 
 class CC3MList:
-    def __init__(self, path, eval_ratio):
+    def __init__(self, pathes, eval_ratio):
         # list all index(.npy) files
-        lst = glob.glob(f"{path}/*.npy")
+        lst = []
+        for path in pathes:
+            lst += glob.glob(f"{path}/*.npy")
         filename_to_id = {}
         self._id_to_filename = {}
         fid = 0

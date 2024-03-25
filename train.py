@@ -13,7 +13,7 @@ from ALBEF.provider import ALBEFProvider
 
 @dataclass
 class TrainConfig:
-    data_path: tuple = "/home/robin/Downloads/cc12m"
+    data_path: tuple = ("/home/robin/Downloads/cc12m", "/home/robin/Downloads/cc3m")
     eval_ratio: float = 0.05
     batch_size: int = 64
     num_workers: int = 2
