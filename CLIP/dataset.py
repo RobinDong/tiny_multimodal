@@ -12,6 +12,7 @@ class CC3MList:
         lst = []
         for path in pathes:
             lst += glob.glob(f"{path}/*.npy")
+        np.random.shuffle(lst)
         filename_to_id = {}
         self._id_to_filename = {}
         fid = 0
