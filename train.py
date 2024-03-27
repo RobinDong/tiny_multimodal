@@ -48,7 +48,7 @@ class Trainer:
             config.batch_size = 64
             self.train_provider = MLMProvider(config)
         elif args.provider == "ALBEF":
-            config.batch_size = 64
+            config.batch_size = 48
             self.train_provider = ALBEFProvider(config)
 
         train_ds, eval_ds = self.train_provider.get_datasets(config)

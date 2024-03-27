@@ -88,20 +88,9 @@ class ALBEF(nn.Module):
 
     def forward(self, inp):
         images, texts, targets = inp
+        _, text_seq_len = texts.size()
 
-        # shuffle first half of the images, and also labels
-        batch_size, text_seq_len = texts.size()
-        assert (batch_size % 2) == 0, "The batch-size must be even number"
-        half_size = batch_size // 2
-        indexes = torch.cat(
-            (torch.randperm(half_size), torch.arange(half_size, batch_size)), dim=0
-        )
-        label_matrix = torch.diag(torch.ones(batch_size))[indexes].cuda()
-        image_labels = torch.argmax(label_matrix, dim=1)
-        text_labels = torch.argmax(label_matrix, dim=0)
-        match_labels = torch.diagonal(label_matrix.long(), 0)
-        images = images[indexes]
-
+        # ITC loss
         img_embds, img_feature = self.img_encoder(images)
         txt_embds, txt_feature = self.txt_encoder(texts)
         img_embds = F.normalize(img_embds, dim=-1)
@@ -111,37 +100,33 @@ class ALBEF(nn.Module):
         logits_per_image = self.logit_scale.exp() * img_embds @ txt_embds.T
         logits_per_text = logits_per_image.T
 
+        labels = torch.arange(logits_per_image.size(0), device=images.device)
         itc_loss = (
-            F.cross_entropy(logits_per_image, image_labels)
-            + F.cross_entropy(logits_per_text, text_labels)
+            F.cross_entropy(logits_per_image, labels)
+            + F.cross_entropy(logits_per_text, labels)
         ) / 2.0
 
         out = torch.cat((img_feature, txt_feature), dim=1)
         for block in self.multimodal_encoder:
             out = block(out)  # B, S, E
         # ITM loss
-        last_token = out[:, -1, :]
-        itm_out = self.itm_mlp(last_token)  # B, S, 2
-        itm_loss = F.cross_entropy(itm_out, match_labels)
-        # MLM loss (only second half of batch will be used for MLM)
-        logits = self.txt_encoder.encoder.lm_head(
-            out[batch_size // 2 :, :text_seq_len, :]
-        )
+        # last_token = out[:, -1, :]
+        # itm_out = self.itm_mlp(last_token)  # B, S, 2
+        # itm_loss = F.cross_entropy(itm_out, match_labels)
+        # MLM loss
+        logits = self.txt_encoder.encoder.lm_head(out[:, :text_seq_len, :])
         mlm_loss = F.cross_entropy(
             logits.view(-1, logits.size(-1)),
-            targets[batch_size // 2 :, :].view(-1),
+            targets.view(-1),
             ignore_index=-1,
         )
         return (
             logits_per_image,
             logits_per_text,
-            image_labels,
-            text_labels,
-            itm_out,
-            match_labels,
+            labels,
             logits,
-            targets[batch_size // 2 :, :],
-            mlm_loss,
+            targets,
+            itc_loss + mlm_loss,
         )
 
 

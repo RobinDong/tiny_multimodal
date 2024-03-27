@@ -28,10 +28,7 @@ class ALBEFProvider:
             (
                 logits_image,
                 logits_text,
-                image_labels,
-                text_labels,
-                itm_out,
-                match_labels,
+                labels,
                 logits,
                 targets,
                 loss,
@@ -40,10 +37,7 @@ class ALBEFProvider:
         return (
             logits_image,
             logits_text,
-            image_labels,
-            text_labels,
-            itm_out,
-            match_labels,
+            labels,
             logits,
             targets,
             loss,
@@ -62,30 +56,20 @@ class ALBEFProvider:
         (
             logits_image,
             logits_text,
-            image_labels,
-            text_labels,
-            itm_out,
-            match_labels,
+            labels,
             logits,
             targets,
             loss,
         ) = train_result
 
-        text_accu = ALBEFProvider.get_accuracy(logits_text, text_labels)
-        itm_accu = ALBEFProvider.get_accuracy(itm_out, match_labels)
-        print("logits:", logits.size(), targets.size())
+        text_accu = ALBEFProvider.get_accuracy(logits_text, labels)
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
         mlm_accu = ALBEFProvider.get_accuracy(logits, targets.view(-1))
-        print(
-            (
-                f"text accu: {text_accu:.4f}, itm accu: {itm_accu:.4f}, "
-                f"mlm accu: {mlm_accu:.4f}"
-            )
-        )
+        print(f"text accu: {text_accu:.4f}, mlm accu: {mlm_accu:.4f}")
         return (
             iteration // len(train_loader),
-            ALBEFProvider.get_accuracy(logits_image, image_labels),
+            ALBEFProvider.get_accuracy(logits_image, labels),
             loss,
         )
 
@@ -96,13 +80,15 @@ class ALBEFProvider:
 
     @staticmethod
     def get_validate_accuracy(data_entry, model, ctx, device_type):
-        images, texts = data_entry
+        images, texts, targets = data_entry
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
+        targets = targets.cuda()
         # forward
         with ctx:
-            logits_image, _, image_labels, _, loss = model((images, texts))
+            _, _, _, logits, targets, loss = model((images, texts, targets))
         # accuracy
-        _, predict = torch.max(logits_image, dim=-1)
-        correct = predict == image_labels
-        return correct.sum().item() / correct.size(0), loss.item()
+        batch_size, seq_len, _ = logits.size()
+        logits = logits.view(batch_size * seq_len, -1)
+        accuracy = ALBEFProvider.get_accuracy(logits, targets.view(-1))
+        return accuracy, loss.item()
