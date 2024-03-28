@@ -1,0 +1,4 @@
+torch
+timm
+tiktoken
+opencv-python
