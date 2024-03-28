@@ -1,4 +1,6 @@
-![tiny_multimodal](assets/tiny_multimodal.png)
+<p align="center">
+  <img src="https://github.com/RobinDong/tiny_multimodal/blob/1fbdfb6320b50c23a2bbb899db5e56b415d9fbbb/assets/tiny_multimodal.png?raw=true")
+</p>
 
 # Tiny Multimodal
 
@@ -31,4 +33,5 @@ python train.py --provider CLIP
 
 ## acknowledgements
 This repo is still in developing. Please be patient for more multi-modal models.
+
 Any issue or pull request is welcome.
