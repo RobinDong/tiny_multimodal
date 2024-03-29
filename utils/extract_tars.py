@@ -1,5 +1,7 @@
+import fire
 import glob
 import tarfile
+from functools import partial
 from multiprocessing import Pool
 from collections import defaultdict
 
@@ -7,14 +9,10 @@ import cv2
 import numpy as np
 
 
-n_jobs = 2
-input_path = "/mnt/backup_3080ti/cc12m/"
-output_path = "/home/robin/Downloads/cc12m/"
-image_size = (256, 256)
-
-
-def task(tar_filename):
-    mapping = defaultdict(dict)  # filename -> {"img" -> image-bytes, "txt" -> text-bytes}
+def task(tar_filename, output_path, image_size):
+    mapping = defaultdict(
+        dict
+    )  # filename -> {"img" -> image-bytes, "txt" -> text-bytes}
     try:
         with tarfile.open(tar_filename) as tarf:
             for member in tarf.getmembers():
@@ -59,11 +57,18 @@ def task(tar_filename):
         print("Failed filename:", tar_filename)
 
 
-def extract():
+def extract(
+    input_path="/mnt/backup_3080ti/cc12m/",
+    output_path="/home/robin/Downloads/cc12m/",
+    jobs=2,
+    image_size=(256, 256),
+):
     tar_list = glob.glob(input_path + "*.tar")
-    with Pool(n_jobs) as pool:
-        pool.map(task, tar_list)
+    with Pool(jobs) as pool:
+        pool.map(
+            partial(task, output_path=output_path, image_size=image_size), tar_list
+        )
 
 
 if __name__ == "__main__":
-    extract()
+    fire.Fire(extract)

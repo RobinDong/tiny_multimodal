@@ -1,3 +1,4 @@
+fire
 torch
 timm
 tiktoken

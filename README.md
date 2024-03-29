@@ -24,7 +24,10 @@ python -m pip install -r requirements.txt
 
 Download [conceptual-12m](https://github.com/google-research-datasets/conceptual-12m) from [Huggingface](https://huggingface.co/datasets/pixparse/cc12m-wds) to directory `cc12m-wds`.
 
-Use `python utils/extract_tars.py` to convert CC12M to ready-to-use format.
+Use `utils/extract_tars.py` to convert CC12M to ready-to-use format:
+```
+python utils/extract_tars.py --input_path=<YOUR_DIR>/cc12m-wds/ --output_path=<YOUR_OUTPUT_PATH> --jobs=<YOUR_CPU_CORES>
+```
 
 ### train
 ```
