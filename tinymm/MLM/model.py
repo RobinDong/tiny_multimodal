@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 from torch import nn
 
-from GPT.model import GPT
+from tinymm.GPT.model import GPT
 
 
 class MLM(nn.Module):

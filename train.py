@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 import torch
 from torch.utils import data
-from CLIP.provider import CLIPProvider
-from MLM.provider import MLMProvider
-from ALBEF.provider import ALBEFProvider
+from tinymm.CLIP.provider import CLIPProvider
+from tinymm.MLM.provider import MLMProvider
+from tinymm.ALBEF.provider import ALBEFProvider
 
 
 @dataclass

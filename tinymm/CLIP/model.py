@@ -6,7 +6,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from GPT.model import GPTConfig, GPT
+from tinymm.GPT.model import GPTConfig, GPT
 
 clip_n_embd = 512
 

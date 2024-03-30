@@ -1,7 +1,7 @@
 import torch
 
-from CLIP.dataset import CC3MList, CC3MDataset
-from CLIP.model import ImageConfig, GPTConfig, CLIP
+from tinymm.CLIP.dataset import CC3MList, CC3MDataset
+from tinymm.CLIP.model import ImageConfig, GPTConfig, CLIP
 
 
 class CLIPProvider:

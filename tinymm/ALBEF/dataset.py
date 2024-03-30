@@ -1,6 +1,6 @@
 import numpy as np
 
-from CLIP.dataset import CC3MDataset
+from tinymm.CLIP.dataset import CC3MDataset
 
 MASK_ID = 50257
 MASKED_RATIO = 0.15

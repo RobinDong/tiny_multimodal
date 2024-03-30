@@ -1,8 +1,8 @@
 import torch
 
-from MLM.dataset import ENWikiList, ENWikiDataset
-from MLM.model import MLM
-from GPT.model import GPTConfig
+from tinymm.MLM.dataset import ENWikiList, ENWikiDataset
+from tinymm.MLM.model import MLM
+from tinymm.GPT.model import GPTConfig
 
 
 class MLMProvider:

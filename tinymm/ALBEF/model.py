@@ -6,7 +6,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from GPT.model import GPTConfig, GPT, Block
+from tinymm.GPT.model import GPTConfig, GPT, Block
 
 
 @dataclass

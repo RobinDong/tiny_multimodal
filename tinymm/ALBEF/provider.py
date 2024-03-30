@@ -1,8 +1,8 @@
 import torch
 
-from CLIP.dataset import CC3MList
-from ALBEF.dataset import ALBEFDataset
-from ALBEF.model import AlbefConfig, ALBEF
+from tinymm.CLIP.dataset import CC3MList
+from tinymm.ALBEF.dataset import ALBEFDataset
+from tinymm.ALBEF.model import AlbefConfig, ALBEF
 
 
 class ALBEFProvider:
