@@ -7,16 +7,21 @@ if platform.system() == "Windows":
 
 
 def fetch_requirements(filename):
-    with open(filename) as f:
-        return [ln.strip() for ln in f.read().split("\n")]
+    with open(filename, "r", encoding="utf-8") as fp:
+        return [ln.strip() for ln in fp.read().split("\n")]
+
+
+def fetch_readme(filename):
+    with open(filename, "r", encoding="utf-8") as fp:
+        return fp.read()
 
 
 setup(
     name="tinymm",
     version="0.10",
     author="Robin Dong",
-	description = "A simple and 'tiny' implementation of many multimodal models",
-    long_description=open("README.md", "r", encoding="utf-8").read(),
+    description="A simple and 'tiny' implementation of many multimodal models",
+    long_description=fetch_readme("README.md"),
     long_description_content_type="text/markdown",
     keywords="Vision-Language, Multimodal, Deep Learning, Library, PyTorch",
     license="MIT License",
