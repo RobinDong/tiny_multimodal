@@ -19,5 +19,7 @@ class MLM(nn.Module):
         texts, targets = inp
         out = self.encoder(texts)  # B, S, E
         logits = self.encoder.lm_head(out)
-        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        loss = F.cross_entropy(
+            logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1
+        )
         return logits, loss

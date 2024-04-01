@@ -2,20 +2,23 @@ import os
 import time
 import math
 import argparse
+from importlib import import_module
 from dataclasses import dataclass
 
 import torch
 from torch.utils import data
-from tinymm.CLIP.provider import CLIPProvider
-from tinymm.MLM.provider import MLMProvider
-from tinymm.ALBEF.provider import ALBEFProvider
+from tinymm.model_config import ModelConfig
 
 
 @dataclass
 class TrainConfig:
-    data_path: tuple = ("/home/robin/Downloads/cc12m", "/home/robin/Downloads/cc3m", "/home/robin/Downloads/sbu_caption")
+    data_path: tuple = (
+        "/home/robin/Downloads/cc12m",
+        "/home/robin/Downloads/cc3m",
+        "/home/robin/Downloads/sbu_caption",
+    )
     eval_ratio: float = 0.05
-    batch_size: int = 64
+    batch_size: int = 48
     num_workers: int = 4
     lr: float = 1e-4
     min_lr: float = 1e-6
@@ -26,6 +29,7 @@ class TrainConfig:
     warmup_iters: int = 2000
     lr_decay_iters: int = 512000
     max_iters: int = 1000000
+    model_config: ModelConfig = None
 
 
 ckpt_dir = "out"
@@ -42,14 +46,24 @@ class Trainer:
             device_type=self.device_type, dtype=torch.bfloat16
         )
 
-        if args.provider == "CLIP":
-            self.train_provider = CLIPProvider(config)
-        elif args.provider == "MLM":
-            config.batch_size = 64
-            self.train_provider = MLMProvider(config)
-        elif args.provider == "ALBEF":
-            config.batch_size = 48
-            self.train_provider = ALBEFProvider(config)
+        if args.resume:
+            checkpoint = torch.load(args.resume, map_location=self.device_type)
+            self.state_dict = checkpoint["model"]
+            self.config = checkpoint["train_config"]
+            self.iter_start = checkpoint["iteration"] + 1
+            model_name = self.config.model_config.model_name
+            module = import_module(f"tinymm.{model_name}.provider")
+            class_ = getattr(module, f"{model_name}Provider")
+            self.train_provider = class_(self.config.model_config)
+            print(f"Resume from {self.iter_start - 1} for model {model_name}...")
+        else:
+            self.iter_start = 1
+            module = import_module(f"tinymm.{args.provider}.model")
+            class_ = getattr(module, f"{args.provider}Config")
+            self.config.model_config = class_()
+            module = import_module(f"tinymm.{args.provider}.provider")
+            class_ = getattr(module, f"{args.provider}Provider")
+            self.train_provider = class_(self.config)
 
         train_ds, eval_ds = self.train_provider.get_datasets(config)
         self.train_loader = data.DataLoader(
@@ -108,8 +122,8 @@ class Trainer:
         return config.min_lr + coeff * (config.lr - config.min_lr)
 
     @torch.no_grad()
-    def validate(self, model):
-        model.eval()
+    def validate(self, cmodel):
+        cmodel.eval()
 
         total_loss = 0.0
         batch_iter = iter(self.val_loader)
@@ -118,7 +132,7 @@ class Trainer:
         for _ in range(length - 1):
             data_entry = next(batch_iter)
             accuracy, loss = self.train_provider.get_validate_accuracy(
-                data_entry, model, self.ctx, self.device_type
+                data_entry, cmodel, self.ctx, self.device_type
             )
             sum_accuracy += accuracy
             total_loss += loss
@@ -126,15 +140,13 @@ class Trainer:
         avg_loss = total_loss / length
         avg_accuracy = sum_accuracy / length
 
-        model.train()
+        cmodel.train()
         return avg_loss, avg_accuracy
 
     def train(self, args):
+        model = self.train_provider.construct_model(self.config).cuda()
         if args.resume:
-            checkpoint = torch.load(args.resume, map_location=self.device_type)
-            model = checkpoint["model"]
-        else:
-            model = self.train_provider.construct_model(self.config).cuda()
+            model.load_state_dict(self.state_dict)
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
             cmodel.parameters(),
@@ -145,7 +157,7 @@ class Trainer:
         best_val_accuracy = 1e-9
         begin = time.time()
 
-        for iteration in range(self.config.max_iters):
+        for iteration in range(self.iter_start, self.config.max_iters):
             lr = self.get_lr(iteration)
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr
@@ -169,7 +181,9 @@ class Trainer:
                 avg_loss, avg_accuracy = self.validate(cmodel)
                 if avg_accuracy > best_val_accuracy:
                     checkpoint = {
-                        "model": model,
+                        "model": model.state_dict(),
+                        "iteration": iteration,
+                        "train_config": self.config,
                         "eval_accuracy": avg_accuracy,
                     }
                     torch.save(

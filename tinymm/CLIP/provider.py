@@ -1,7 +1,7 @@
 import torch
 
 from tinymm.CLIP.dataset import CC3MList, CC3MDataset
-from tinymm.CLIP.model import ImageConfig, GPTConfig, CLIP
+from tinymm.CLIP.model import CLIP
 
 
 class CLIPProvider:
@@ -39,8 +39,7 @@ class CLIPProvider:
 
     @staticmethod
     def construct_model(config):
-        tconfig = GPTConfig(seq_len=config.seq_len)
-        return CLIP(ImageConfig(), tconfig)
+        return CLIP(config.model_config)
 
     @staticmethod
     def get_validate_accuracy(data_entry, model, ctx, device_type):

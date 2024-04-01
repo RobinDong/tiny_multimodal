@@ -6,20 +6,26 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from tinymm.model_config import ModelConfig
 from tinymm.GPT.model import GPTConfig, GPT
-
-clip_n_embd = 512
 
 
 @dataclass
-class ImageConfig:
+class CLIPConfig(ModelConfig):
+    model_name: str = "CLIP"
     image_encoder_name: str = "convnextv2_tiny"
     image_dropout: float = 0.0
+    text_encoder_name: str = "GPT"
+    text_embd: int = 768
+    text_layer: int = 12
+    text_head: int = 12
+    text_dropout: float = 0.0
+    clip_n_embd: int = 512
 
 
 class ImageEncoder(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config: CLIPConfig):
         super().__init__()
 
         base_model = timm.create_model(
@@ -30,7 +36,7 @@ class ImageEncoder(nn.Module):
             drop_path_rate=config.image_dropout,
         )
         layers = list(base_model.children())
-        layers[-1].fc = nn.Linear(layers[-1].fc.in_features, clip_n_embd)
+        layers[-1].fc = nn.Linear(layers[-1].fc.in_features, config.clip_n_embd)
         self.encoder = nn.Sequential(*layers)
 
     def get_num_params(self):
@@ -43,11 +49,16 @@ class ImageEncoder(nn.Module):
 
 class TextEncoder(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config: CLIPConfig):
         super().__init__()
 
-        self.encoder = GPT(config).cuda()
-        self.txt_proj = nn.Linear(config.n_embd, clip_n_embd)
+        gconfig = GPTConfig()
+        gconfig.n_embd = config.text_embd
+        gconfig.n_layer = config.text_layer
+        gconfig.n_head = config.text_head
+        gconfig.dropout = config.text_dropout
+        self.encoder = GPT(gconfig)
+        self.txt_proj = nn.Linear(gconfig.n_embd, config.clip_n_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
@@ -56,17 +67,16 @@ class TextEncoder(nn.Module):
     def forward(self, inp):
         out = self.encoder(inp)
         out = out[:, -1, :]
-        # out = out.contiguous().view(inp.size(0), -1)
         return self.txt_proj(out)
 
 
 class CLIP(nn.Module):
 
-    def __init__(self, img_config, txt_config):
+    def __init__(self, config: CLIPConfig):
         super().__init__()
 
-        self.img_encoder = ImageEncoder(img_config).cuda()
-        self.txt_encoder = TextEncoder(txt_config).cuda()
+        self.img_encoder = ImageEncoder(config)
+        self.txt_encoder = TextEncoder(config)
         print("Image Encoder number of parameters:", self.img_encoder.get_num_params())
         print("Text Encoder number of parameters:", self.txt_encoder.get_num_params())
 
@@ -92,12 +102,10 @@ class CLIP(nn.Module):
 
 
 if __name__ == "__main__":
-    iconfig = ImageConfig()
-    gconfig = GPTConfig()
-
-    clip = CLIP(iconfig, gconfig)
+    config = CLIPConfig()
+    clip = CLIP(config)
 
     imgs = torch.rand(8, 3, 256, 256)
-    txts = torch.randint(0, 50304, (8, 512))
+    txts = torch.randint(0, 50304, (8, 64))
     loss = clip((imgs, txts))
     print(loss)
