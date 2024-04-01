@@ -13,10 +13,10 @@ from tinymm.ALBEF.provider import ALBEFProvider
 
 @dataclass
 class TrainConfig:
-    data_path: tuple = ("/home/robin/Downloads/cc12m", "/home/robin/Downloads/cc3m")
+    data_path: tuple = ("/home/robin/Downloads/cc12m", "/home/robin/Downloads/cc3m", "/home/robin/Downloads/sbu_caption")
     eval_ratio: float = 0.05
     batch_size: int = 64
-    num_workers: int = 2
+    num_workers: int = 4
     lr: float = 1e-4
     min_lr: float = 1e-6
     grad_clip: float = 1.0
