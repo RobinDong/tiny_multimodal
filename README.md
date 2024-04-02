@@ -3,12 +3,14 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-blue"/>
+  <a href="https://en.wikipedia.org/wiki/MIT_License">
+    <img src="https://img.shields.io/badge/license-MIT-blue"/>
+  </a>
   <a href="https://github.com/psf/black">
-    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg"/>
   </a>
   <a href="https://github.com/pylint-dev/pylint">
-    <img src="https://img.shields.io/badge/linting-pylint-yellowgreen" alt="pylint" />
+    <img src="https://img.shields.io/badge/linting-pylint-yellowgreen"/>
   </a>
 </p>
 
