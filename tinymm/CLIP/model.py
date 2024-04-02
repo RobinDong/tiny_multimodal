@@ -52,11 +52,7 @@ class TextEncoder(nn.Module):
     def __init__(self, config: CLIPConfig):
         super().__init__()
 
-        gconfig = GPTConfig()
-        gconfig.n_embd = config.text_embd
-        gconfig.n_layer = config.text_layer
-        gconfig.n_head = config.text_head
-        gconfig.dropout = config.text_dropout
+        gconfig = GPTConfig(config)
         self.encoder = GPT(gconfig)
         self.txt_proj = nn.Linear(gconfig.n_embd, config.clip_n_embd)
 

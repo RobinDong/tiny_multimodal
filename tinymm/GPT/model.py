@@ -4,10 +4,18 @@ from dataclasses import dataclass
 import torch
 from torch import nn
 from torch.nn import functional as F
+from tinymm.model_config import ModelConfig
 
 
 @dataclass
 class GPTConfig:
+    def __init__(self, config: ModelConfig = None):
+        if config:
+            self.n_embd = config.text_embd
+            self.n_layer = config.text_layer
+            self.n_head = config.text_head
+            self.dropout = config.text_dropout
+
     vocab_size: int = 50304
     seq_len: int = 64
     n_embd: int = 768

@@ -72,12 +72,7 @@ class ALBEF(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        gconfig = GPTConfig()
-        gconfig.n_embd = config.text_embd
-        gconfig.n_layer = config.text_layer
-        gconfig.n_head = config.text_head
-        gconfig.dropout = config.text_dropout
-
+        gconfig = GPTConfig(config)
         self.img_encoder = ImageEncoder(config)
         self.txt_encoder = TextEncoder(gconfig, config)
         print("Image Encoder number of parameters:", self.img_encoder.get_num_params())

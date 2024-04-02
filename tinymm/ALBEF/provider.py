@@ -2,7 +2,7 @@ import torch
 
 from tinymm.CLIP.dataset import CC3MList
 from tinymm.ALBEF.dataset import ALBEFDataset
-from tinymm.ALBEF.model import ALBEFConfig, ALBEF
+from tinymm.ALBEF.model import ALBEF
 
 
 class ALBEFProvider:

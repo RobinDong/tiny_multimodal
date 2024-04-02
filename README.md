@@ -7,8 +7,9 @@
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
   </a>
-  [![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
-  [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
+  <a href="https://github.com/pylint-dev/pylint">
+    <img src="https://img.shields.io/badge/linting-pylint-yellowgreen" alt="pylint" />
+  </a>
 </p>
 
 # Tiny Multimodal

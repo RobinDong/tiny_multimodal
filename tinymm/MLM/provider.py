@@ -46,11 +46,11 @@ class MLMProvider:
 
     @staticmethod
     def construct_model(config):
-        tconfig = GPTConfig(seq_len=config.seq_len)
-        tconfig.n_layer = 12
-        tconfig.n_head = 12
-        tconfig.n_embd = 768
-        return MLM(tconfig)
+        gconfig = GPTConfig()
+        gconfig.n_layer = 12
+        gconfig.n_head = 12
+        gconfig.n_embd = 768
+        return MLM(gconfig)
 
     @staticmethod
     def get_validate_accuracy(
