@@ -12,7 +12,7 @@ class MLMProvider:
     @staticmethod
     def get_datasets(config):
         # prepare dataset
-        lst = ENWikiList("enwiki/", config.eval_ratio)
+        lst = ENWikiList("/home/robin/Downloads/enwiki/", config.eval_ratio)
         train_ds = ENWikiDataset(lst.to_train_list(), config.seq_len)
         eval_ds = ENWikiDataset(lst.to_eval_list(), config.seq_len)
         return train_ds, eval_ds

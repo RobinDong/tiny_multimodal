@@ -1,28 +1,31 @@
-from dataclasses import dataclass
-
 import timm
 import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
 
+from dataclasses import dataclass
+from torch import nn
+from tinymm.model_config import ModelConfig
 from tinymm.GPT.model import GPTConfig, GPT, Block
 
 
 @dataclass
-class AlbefConfig:
+class ALBEFConfig(ModelConfig):
+    model_name: str = "ALBEF"
+    batch_size: int = 48
     image_encoder_name: str = "vit_medium_patch16_gap_256"
     image_dropout: float = 0.0
-    text_encoder_layer: int = 6
-    text_seq_len: int = 64
-    n_embd: int = 768
+    text_encoder_name: str = "GPT"
+    text_embd: int = 768
+    text_layer: int = 6
+    text_head: int = 12
+    text_dropout: float = 0.0
     itc_embd: int = 128  # The original ALBEF use 256 dims for ITC loss
     multimodal_layer: int = 6
 
 
 class ImageEncoder(nn.Module):
-
-    def __init__(self, config):
+    def __init__(self, config: ALBEFConfig):
         super().__init__()
 
         base_model = timm.create_model(
@@ -34,7 +37,7 @@ class ImageEncoder(nn.Module):
         )
         layers = list(base_model.children())[:-1]
         self.encoder = nn.Sequential(*layers)
-        self.out_proj = nn.Linear(512, config.n_embd)
+        self.out_proj = nn.Linear(512, config.text_embd)
         self.img_proj = nn.Linear(512, config.itc_embd)
 
     def get_num_params(self):
@@ -50,10 +53,10 @@ class ImageEncoder(nn.Module):
 
 class TextEncoder(nn.Module):
 
-    def __init__(self, tconfig, config):
+    def __init__(self, gconfig, config):
         super().__init__()
-        self.encoder = GPT(tconfig)
-        self.txt_proj = nn.Linear(tconfig.n_embd, config.itc_embd)
+        self.encoder = GPT(gconfig)
+        self.txt_proj = nn.Linear(config.text_embd, config.itc_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
@@ -66,25 +69,25 @@ class TextEncoder(nn.Module):
 
 
 class ALBEF(nn.Module):
-
     def __init__(self, config):
         super().__init__()
 
-        tconfig = GPTConfig()
-        tconfig.n_embd = config.n_embd
-        tconfig.seq_len = config.text_seq_len
-        tconfig.n_layer = config.text_encoder_layer
+        gconfig = GPTConfig()
+        gconfig.n_embd = config.text_embd
+        gconfig.n_layer = config.text_layer
+        gconfig.n_head = config.text_head
+        gconfig.dropout = config.text_dropout
 
         self.img_encoder = ImageEncoder(config)
-        self.txt_encoder = TextEncoder(tconfig, config)
+        self.txt_encoder = TextEncoder(gconfig, config)
         print("Image Encoder number of parameters:", self.img_encoder.get_num_params())
         print("Text Encoder number of parameters:", self.txt_encoder.get_num_params())
 
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.multimodal_encoder = nn.ModuleList(
-            [Block(tconfig) for _ in range(config.multimodal_layer)]
+            [Block(gconfig) for _ in range(config.multimodal_layer)]
         )
-        self.itm_mlp = nn.Linear(config.n_embd, 2)
+        self.itm_mlp = nn.Linear(config.text_embd, 2)
 
     def forward(self, inp):
         images, texts, targets = inp
@@ -131,14 +134,14 @@ class ALBEF(nn.Module):
 
 
 if __name__ == "__main__":
-    config = AlbefConfig()
+    config = ALBEFConfig()
     encoder = ImageEncoder(config)
     image = torch.rand([64, 3, 256, 256])
     tok, out = encoder(image)
     print("tok:", tok.size(), "out:", out.size())
 
     model = ALBEF(config)
-    text = torch.rand([64, 128]) * 100
+    text = torch.rand([64, 64]) * 100
     print("text:", text.long())
-    loss = model((image, text.long()))
+    _, _, _, _, _, loss = model((image, text.long(), text.long()))
     print("loss:", loss)

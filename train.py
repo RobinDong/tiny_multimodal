@@ -18,7 +18,6 @@ class TrainConfig:
         "/home/robin/Downloads/sbu_caption",
     )
     eval_ratio: float = 0.05
-    batch_size: int = 48
     num_workers: int = 4
     lr: float = 1e-4
     min_lr: float = 1e-6
@@ -68,7 +67,7 @@ class Trainer:
         train_ds, eval_ds = self.train_provider.get_datasets(config)
         self.train_loader = data.DataLoader(
             train_ds,
-            config.batch_size,
+            config.model_config.batch_size,
             num_workers=config.num_workers,
             shuffle=True,
             pin_memory=True,
@@ -77,7 +76,7 @@ class Trainer:
 
         self.val_loader = data.DataLoader(
             eval_ds,
-            config.batch_size,
+            config.model_config.batch_size,
             num_workers=config.num_workers,
             shuffle=False,
             pin_memory=True,
@@ -86,7 +85,7 @@ class Trainer:
     def train_loop(self, model, optimizer):
         try:
             data_entry = next(self.train_batch_iter)
-            if len(data_entry[0]) < self.config.batch_size:
+            if len(data_entry[0]) < self.config.model_config.batch_size:
                 self.train_batch_iter = iter(self.train_loader)
                 data_entry = next(self.train_batch_iter)
         except StopIteration:

@@ -2,7 +2,7 @@ import torch
 
 from tinymm.CLIP.dataset import CC3MList
 from tinymm.ALBEF.dataset import ALBEFDataset
-from tinymm.ALBEF.model import AlbefConfig, ALBEF
+from tinymm.ALBEF.model import ALBEFConfig, ALBEF
 
 
 class ALBEFProvider:
@@ -75,8 +75,7 @@ class ALBEFProvider:
 
     @staticmethod
     def construct_model(config):
-        config = AlbefConfig()
-        return ALBEF(config)
+        return ALBEF(config.model_config)
 
     @staticmethod
     def get_validate_accuracy(data_entry, model, ctx, device_type):

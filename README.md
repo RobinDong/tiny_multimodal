@@ -2,6 +2,15 @@
   <img src="https://github.com/RobinDong/tiny_multimodal/blob/1fbdfb6320b50c23a2bbb899db5e56b415d9fbbb/assets/tiny_multimodal.png?raw=true")
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue"/>
+  <a href="https://github.com/psf/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+  </a>
+  [![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
+  [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
+</p>
+
 # Tiny Multimodal
 
 A simple and "tiny" implementation of many multimodal models. It supports training/finetuning/deploying these tiny-sized models.

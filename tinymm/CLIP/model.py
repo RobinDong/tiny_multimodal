@@ -1,11 +1,10 @@
-from dataclasses import dataclass
-
 import timm
 import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
 
+from dataclasses import dataclass
+from torch import nn
 from tinymm.model_config import ModelConfig
 from tinymm.GPT.model import GPTConfig, GPT
 
@@ -13,6 +12,7 @@ from tinymm.GPT.model import GPTConfig, GPT
 @dataclass
 class CLIPConfig(ModelConfig):
     model_name: str = "CLIP"
+    batch_size: int = 64
     image_encoder_name: str = "convnextv2_tiny"
     image_dropout: float = 0.0
     text_encoder_name: str = "GPT"
