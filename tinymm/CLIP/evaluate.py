@@ -6,6 +6,7 @@ import numpy as np
 
 import torch
 
+from importlib import import_module
 from tqdm import tqdm
 
 
@@ -80,7 +81,14 @@ class Evaluator:
     def __init__(self, ckpt_path, dataset):
         self.device_type = "cpu"
         checkpoint = torch.load(ckpt_path, map_location=self.device_type)
-        model = checkpoint["model"]
+        state_dict = checkpoint["model"]
+        config = checkpoint["train_config"]
+        model_name = config.model_config.model_name
+        module = import_module(f"tinymm.{model_name}.provider")
+        class_ = getattr(module, f"{model_name}Provider")
+        train_provider = class_(config.model_config)
+        model = train_provider.construct_model(config)
+        model.load_state_dict(state_dict)
         model.eval()
         self.dataset = self.class_map[dataset](model)
 
