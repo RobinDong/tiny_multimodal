@@ -67,8 +67,8 @@ class Trainer:
         train_ds, eval_ds = self.train_provider.get_datasets(config)
         self.train_loader = data.DataLoader(
             train_ds,
-            config.model_config.batch_size,
-            num_workers=config.num_workers,
+            self.config.model_config.batch_size,
+            num_workers=self.config.num_workers,
             shuffle=True,
             pin_memory=True,
         )
@@ -76,8 +76,8 @@ class Trainer:
 
         self.val_loader = data.DataLoader(
             eval_ds,
-            config.model_config.batch_size,
-            num_workers=config.num_workers,
+            self.config.model_config.batch_size,
+            num_workers=self.config.num_workers,
             shuffle=False,
             pin_memory=True,
         )
