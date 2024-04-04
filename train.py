@@ -1,7 +1,7 @@
 import os
+import fire
 import time
 import math
-import argparse
 from importlib import import_module
 from dataclasses import dataclass
 
@@ -35,7 +35,7 @@ ckpt_dir = "out"
 
 
 class Trainer:
-    def __init__(self, config, args):
+    def __init__(self, config):
         self.config = config
         self.device_type = "cuda"
         self.dtype = "bfloat16"
@@ -44,43 +44,9 @@ class Trainer:
         self.ctx = torch.amp.autocast(
             device_type=self.device_type, dtype=torch.bfloat16
         )
-
-        if args.resume:
-            checkpoint = torch.load(args.resume, map_location=self.device_type)
-            self.state_dict = checkpoint["model"]
-            self.config = checkpoint["train_config"]
-            self.iter_start = checkpoint["iteration"] + 1
-            model_name = self.config.model_config.model_name
-            module = import_module(f"tinymm.{model_name}.provider")
-            class_ = getattr(module, f"{model_name}Provider")
-            self.train_provider = class_(self.config.model_config)
-            print(f"Resume from {self.iter_start - 1} for model {model_name}...")
-        else:
-            self.iter_start = 1
-            module = import_module(f"tinymm.{args.provider}.model")
-            class_ = getattr(module, f"{args.provider}Config")
-            self.config.model_config = class_()
-            module = import_module(f"tinymm.{args.provider}.provider")
-            class_ = getattr(module, f"{args.provider}Provider")
-            self.train_provider = class_(self.config)
-
-        train_ds, eval_ds = self.train_provider.get_datasets(config)
-        self.train_loader = data.DataLoader(
-            train_ds,
-            self.config.model_config.batch_size,
-            num_workers=self.config.num_workers,
-            shuffle=True,
-            pin_memory=True,
-        )
-        self.train_batch_iter = iter(self.train_loader)
-
-        self.val_loader = data.DataLoader(
-            eval_ds,
-            self.config.model_config.batch_size,
-            num_workers=self.config.num_workers,
-            shuffle=False,
-            pin_memory=True,
-        )
+        self.train_batch_iter = None
+        self.train_provider = None
+        self.train_loader = self.val_loader = None
 
     def train_loop(self, model, optimizer):
         try:
@@ -142,21 +108,61 @@ class Trainer:
         cmodel.train()
         return avg_loss, avg_accuracy
 
-    def train(self, args):
-        model = self.train_provider.construct_model(self.config).cuda()
-        if args.resume:
-            model.load_state_dict(self.state_dict)
+    def init(self, resume: str, provider: str):
+        if resume:
+            checkpoint = torch.load(resume, map_location=self.device_type)
+            state_dict = checkpoint["model"]
+            self.config = checkpoint["train_config"]
+            iter_start = checkpoint["iteration"] + 1
+            model_name = self.config.model_config.model_name
+            module = import_module(f"tinymm.{model_name}.provider")
+            class_ = getattr(module, f"{model_name}Provider")
+            self.train_provider = class_(self.config.model_config)
+            model = self.train_provider.construct_model(self.config).cuda()
+            model.load_state_dict(state_dict)
+            print(f"Resume from {iter_start - 1} for model {model_name}...")
+        else:
+            iter_start = 1
+            module = import_module(f"tinymm.{provider}.model")
+            class_ = getattr(module, f"{provider}Config")
+            self.config.model_config = class_()
+            module = import_module(f"tinymm.{provider}.provider")
+            class_ = getattr(module, f"{provider}Provider")
+            self.train_provider = class_(self.config)
+            model = self.train_provider.construct_model(self.config).cuda()
+
+        train_ds, eval_ds = self.train_provider.get_datasets(config)
+        self.train_loader = data.DataLoader(
+            train_ds,
+            self.config.model_config.batch_size,
+            num_workers=self.config.num_workers,
+            shuffle=True,
+            pin_memory=True,
+        )
+        self.train_batch_iter = iter(self.train_loader)
+
+        self.val_loader = data.DataLoader(
+            eval_ds,
+            self.config.model_config.batch_size,
+            num_workers=self.config.num_workers,
+            shuffle=False,
+            pin_memory=True,
+        )
+        return model, iter_start
+
+    def train(self, resume="", provider="CLIP", learning_rate=None):
+        model, iter_start = self.init(resume, provider)
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
             cmodel.parameters(),
-            lr=self.config.lr,
+            lr=learning_rate if learning_rate else self.config.lr,
             weight_decay=0.0,
             amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
 
-        for iteration in range(self.iter_start, self.config.max_iters):
+        for iteration in range(iter_start, self.config.max_iters):
             lr = self.get_lr(iteration)
             for param_group in optimizer.param_groups:
                 param_group["lr"] = lr
@@ -195,19 +201,7 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.enabled = True
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--resume", default="", type=str, help="Resume from a saved checkpoint"
-    )
-    parser.add_argument(
-        "--provider",
-        default="CLIP",
-        type=str,
-        help="Model to be trained",
-        choices=["CLIP", "MLM", "ALBEF"],
-    )
-    args = parser.parse_args()
-
     config = TrainConfig()
-    trainer = Trainer(config, args)
-    trainer.train(args)
+    trainer = Trainer(config)
+
+    fire.Fire(trainer.train)
