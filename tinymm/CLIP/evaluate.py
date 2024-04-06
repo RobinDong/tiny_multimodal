@@ -52,7 +52,7 @@ class Imagenet1K:
         idx = 0
         print("Check all images...")
         for image_name, correct_index in self.images.items():
-            image = load_image(image_name)
+            image = load_image(image_name, self.image_size)
             with torch.no_grad():
                 image_embd = self.model.img_encoder(image)
             logits_per_image = image_embd @ self.cat_embds.T

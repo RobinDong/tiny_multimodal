@@ -35,7 +35,7 @@ class Demo:
 
         img_lst = glob.glob(f"{self.image_path}/*.JPEG")
         for image_name in tqdm(img_lst):
-            image = load_image(image_name)
+            image = load_image(image_name, self.image_size)
             with torch.no_grad():
                 image_embd = model.img_encoder(image)
             self.images[image_name] = image_embd
