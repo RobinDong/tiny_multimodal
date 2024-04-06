@@ -3,33 +3,11 @@ import fire
 import time
 import math
 from importlib import import_module
-from dataclasses import dataclass
+from dataclasses import asdict
 
 import torch
 from torch.utils import data
-from tinymm.model_config import ModelConfig
-
-
-@dataclass
-class TrainConfig:
-    data_path: tuple = (
-        "/home/robin/Downloads/cc12m",
-        "/home/robin/Downloads/cc3m",
-        "/home/robin/Downloads/sbu_caption",
-    )
-    eval_ratio: float = 0.05
-    num_workers: int = 4
-    lr: float = 1e-4
-    min_lr: float = 1e-6
-    grad_clip: float = 1.0
-    seq_len: int = 64
-    log_iters: int = 2000
-    eval_iters: int = 20000
-    warmup_iters: int = 2000
-    lr_decay_iters: int = 512000
-    max_iters: int = 1000000
-    model_config: ModelConfig = None
-
+from tinymm.model_config import TrainConfig
 
 ckpt_dir = "out"
 
@@ -112,8 +90,11 @@ class Trainer:
         if resume:
             checkpoint = torch.load(resume, map_location=self.device_type)
             state_dict = checkpoint["model"]
-            self.config = checkpoint["train_config"]
+            self.config = TrainConfig(**checkpoint["train_config"])
             iter_start = checkpoint["iteration"] + 1
+            module = import_module("tinymm.model_config")
+            class_ = getattr(module, f"{self.config.model_config['model_name']}Config")
+            self.config.model_config = class_(**self.config.model_config)
             model_name = self.config.model_config.model_name
             module = import_module(f"tinymm.{model_name}.provider")
             class_ = getattr(module, f"{model_name}Provider")
@@ -152,12 +133,11 @@ class Trainer:
 
     def train(self, resume="", provider="CLIP", learning_rate=None):
         model, iter_start = self.init(resume, provider)
+        if learning_rate:
+            self.config.lr = learning_rate
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            cmodel.parameters(),
-            lr=learning_rate if learning_rate else self.config.lr,
-            weight_decay=0.0,
-            amsgrad=True,
+            cmodel.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
@@ -188,11 +168,15 @@ class Trainer:
                     checkpoint = {
                         "model": model.state_dict(),
                         "iteration": iteration,
-                        "train_config": self.config,
+                        "train_config": asdict(self.config),
                         "eval_accuracy": avg_accuracy,
                     }
                     torch.save(
-                        checkpoint, os.path.join(ckpt_dir, f"clip_{iteration}.pt")
+                        checkpoint,
+                        os.path.join(
+                            ckpt_dir,
+                            f"{self.config.model_config.model_name}_{iteration}.pt",
+                        ),
                     )
                 print(f"[Eval] loss: {avg_loss:.4f} accuracy: {avg_accuracy:.4f}")
 

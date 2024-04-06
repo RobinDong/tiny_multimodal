@@ -3,24 +3,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from dataclasses import dataclass
 from torch import nn
-from tinymm.model_config import ModelConfig
+from tinymm.model_config import CLIPConfig
 from tinymm.GPT.model import GPTConfig, GPT
-
-
-@dataclass
-class CLIPConfig(ModelConfig):
-    model_name: str = "CLIP"
-    batch_size: int = 64
-    image_encoder_name: str = "convnextv2_tiny"
-    image_dropout: float = 0.0
-    text_encoder_name: str = "GPT"
-    text_embd: int = 768
-    text_layer: int = 12
-    text_head: int = 12
-    text_dropout: float = 0.0
-    clip_n_embd: int = 512
 
 
 class ImageEncoder(nn.Module):

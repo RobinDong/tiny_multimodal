@@ -1,13 +1,12 @@
 import glob
-import argparse
-import cv2
+import fire
 import tiktoken
 import numpy as np
 
 import torch
 
-from importlib import import_module
 from tqdm import tqdm
+from tinymm.utils import load_from_checkpoint, load_image
 
 
 class Imagenet1K:
@@ -39,7 +38,7 @@ class Imagenet1K:
         cat_embds = []
         print("Compute embeddings for all categories...")
         for index in tqdm(range(1, self.nr_categories + 1)):
-            text = f"a photo of {self.cats[index]}"
+            text = f"A photo of a {self.cats[index]}"
             ids = enc.encode_ordinary(text)
             ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
             ids = torch.tensor(ids).unsqueeze(0)
@@ -53,11 +52,7 @@ class Imagenet1K:
         idx = 0
         print("Check all images...")
         for image_name, correct_index in self.images.items():
-            image = (
-                cv2.resize(cv2.imread(image_name), self.image_size).astype("float32")
-                / 255.0
-            )
-            image = torch.tensor(image).unsqueeze(0).permute(0, 3, 1, 2)
+            image = load_image(image_name)
             with torch.no_grad():
                 image_embd = self.model.img_encoder(image)
             logits_per_image = image_embd @ self.cat_embds.T
@@ -78,36 +73,12 @@ class Evaluator:
         "imagenet1k": Imagenet1K,
     }
 
-    def __init__(self, ckpt_path, dataset):
-        self.device_type = "cpu"
-        checkpoint = torch.load(ckpt_path, map_location=self.device_type)
-        state_dict = checkpoint["model"]
-        config = checkpoint["train_config"]
-        model_name = config.model_config.model_name
-        module = import_module(f"tinymm.{model_name}.provider")
-        class_ = getattr(module, f"{model_name}Provider")
-        train_provider = class_(config.model_config)
-        model = train_provider.construct_model(config)
-        model.load_state_dict(state_dict)
-        model.eval()
-        self.dataset = self.class_map[dataset](model)
-
-    def evaluate(self):
-        self.dataset.evaluate()
+    def evaluate(self, checkpoint: str, dataset="imagenet1k"):
+        model = load_from_checkpoint(checkpoint)
+        dataset = self.class_map[dataset](model)
+        dataset.evaluate()
 
 
 if __name__ == "__main__":
-    torch.backends.cudnn.enabled = True
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, help="Path of saved checkpoint")
-    parser.add_argument(
-        "--dataset",
-        default="imagenet1k",
-        type=str,
-        help="Name of the dataset to evaluate",
-    )
-    args = parser.parse_args()
-
-    eva = Evaluator(args.model, args.dataset)
-    eva.evaluate()
+    eva = Evaluator()
+    fire.Fire(eva.evaluate)
