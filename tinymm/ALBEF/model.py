@@ -3,28 +3,14 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from dataclasses import dataclass
 from torch import nn
-from tinymm.model_config import ModelConfig
+from tinymm.model_config import ALBEFConfig
 from tinymm.GPT.model import GPTConfig, GPT, Block
 
 
-@dataclass
-class ALBEFConfig(ModelConfig):
-    model_name: str = "ALBEF"
-    batch_size: int = 48
-    image_encoder_name: str = "vit_medium_patch16_gap_256"
-    image_dropout: float = 0.0
-    text_encoder_name: str = "GPT"
-    text_embd: int = 768
-    text_layer: int = 6
-    text_head: int = 12
-    text_dropout: float = 0.0
-    itc_embd: int = 128  # The original ALBEF use 256 dims for ITC loss
-    multimodal_layer: int = 6
-
-
 class ImageEncoder(nn.Module):
+    vit_output_dims: int = 512
+
     def __init__(self, config: ALBEFConfig):
         super().__init__()
 
@@ -37,8 +23,8 @@ class ImageEncoder(nn.Module):
         )
         layers = list(base_model.children())[:-1]
         self.encoder = nn.Sequential(*layers)
-        self.out_proj = nn.Linear(512, config.text_embd)
-        self.img_proj = nn.Linear(512, config.itc_embd)
+        self.out_proj = nn.Linear(self.vit_output_dims, config.text_embd)
+        self.img_proj = nn.Linear(self.vit_output_dims, config.itc_embd)
 
     def get_num_params(self):
         n_params = sum(p.numel() for p in self.parameters())
@@ -112,7 +98,7 @@ class ALBEF(nn.Module):
         # itm_out = self.itm_mlp(last_token)  # B, S, 2
         # itm_loss = F.cross_entropy(itm_out, match_labels)
         # MLM loss
-        logits = self.txt_encoder.encoder.lm_head(out[:, :text_seq_len, :])
+        logits = self.txt_encoder.encoder.lm_head(out[:, -text_seq_len:, :])
         mlm_loss = F.cross_entropy(
             logits.view(-1, logits.size(-1)),
             targets.view(-1),

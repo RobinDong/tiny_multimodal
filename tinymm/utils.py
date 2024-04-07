@@ -22,6 +22,6 @@ def load_from_checkpoint(checkpoint: str):
     return model
 
 
-def load_image(image_name: str, image_size: tuple(int, int)):
+def load_image(image_name: str, image_size: tuple[int, int]):
     image = cv2.resize(cv2.imread(image_name), image_size).astype("float32") / 255.0
     return torch.tensor(image).unsqueeze(0).permute(0, 3, 1, 2)

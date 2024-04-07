@@ -39,3 +39,18 @@ class CLIPConfig(ModelConfig):
     text_head: int = 8
     text_dropout: float = 0.0
     clip_n_embd: int = 512
+
+
+@dataclass
+class ALBEFConfig(ModelConfig):
+    model_name: str = "ALBEF"
+    batch_size: int = 40
+    image_encoder_name: str = "vit_medium_patch16_gap_256"
+    image_dropout: float = 0.0
+    text_encoder_name: str = "GPT"
+    text_embd: int = 768
+    text_layer: int = 6
+    text_head: int = 12
+    text_dropout: float = 0.0
+    itc_embd: int = 128  # The original ALBEF use 256 dims for ITC loss
+    multimodal_layer: int = 6

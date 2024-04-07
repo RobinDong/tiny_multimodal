@@ -62,11 +62,10 @@ class ALBEFProvider:
             loss,
         ) = train_result
 
-        text_accu = ALBEFProvider.get_accuracy(logits_text, labels)
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
         mlm_accu = ALBEFProvider.get_accuracy(logits, targets.view(-1))
-        print(f"text accu: {text_accu:.4f}, mlm accu: {mlm_accu:.4f}")
+        print(f"mlm accu: {mlm_accu:.4f}")
         return (
             iteration // len(train_loader),
             ALBEFProvider.get_accuracy(logits_image, labels),
