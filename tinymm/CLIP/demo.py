@@ -26,7 +26,7 @@ class Demo:
         model = load_from_checkpoint(checkpoint)
         return model
 
-    def build_embeddings(self, model):
+    def build_embeddings(self, model, cuda):
         model.eval()
         if os.path.exists(self.embd_path):
             with open(self.embd_path, "rb") as fp:
@@ -36,16 +36,22 @@ class Demo:
         img_lst = glob.glob(f"{self.image_path}/*.JPEG")
         for image_name in tqdm(img_lst):
             image = load_image(image_name, self.image_size)
+            model.img_encoder = model.img_encoder
+            if cuda:
+                image = image.cuda()
+                model.img_encoder = model.img_encoder.cuda()
             with torch.no_grad():
                 image_embd = model.img_encoder(image)
+                if cuda:
+                    image_embd = image_embd.cpu()
             self.images[image_name] = image_embd
 
         with open(self.embd_path, "wb") as fp:
             pickle.dump(self.images, fp)
 
-    def start(self, checkpoint: str):
+    def start(self, checkpoint: str, cuda: bool = False):
         model = self.load_model(checkpoint)
-        self.build_embeddings(model)
+        self.build_embeddings(model, cuda)
 
         text = st.text_input("Input:")
         if not text:
