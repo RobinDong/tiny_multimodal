@@ -1,5 +1,6 @@
 import torch
 
+from collections import OrderedDict
 from tinymm.CLIP.dataset import CC3MList, CC3MDataset
 from tinymm.CLIP.model import CLIP
 
@@ -28,14 +29,19 @@ class CLIPProvider:
         return logits_image, logits_text, loss  # train_result
 
     @staticmethod
-    def get_metrics(train_result, device_type, iteration, train_loader):
+    def get_metrics(train_result, device_type, train_loader):
         """What 'train_step' output, is what 'log' get as input"""
         logits_image, _, loss = train_result
         _, predict = torch.max(logits_image, dim=-1)
         correct_labels = torch.arange(logits_image.size(0), device=device_type)
         correct = predict == correct_labels
         accuracy = correct.sum().item() / correct.size(0)
-        return iteration // len(train_loader), accuracy, loss
+        return OrderedDict(
+            [
+                ("loss", loss.item()),
+                ("accu", accuracy),
+            ]
+        )
 
     @staticmethod
     def construct_model(config):

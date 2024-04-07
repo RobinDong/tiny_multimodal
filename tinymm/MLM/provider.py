@@ -1,5 +1,6 @@
 import torch
 
+from collections import OrderedDict
 from tinymm.MLM.dataset import ENWikiList, ENWikiDataset
 from tinymm.MLM.model import MLM
 from tinymm.GPT.model import GPTConfig
@@ -34,7 +35,7 @@ class MLMProvider:
 
     @staticmethod
     def get_metrics(
-        train_result, device_type, iteration, train_loader
+        train_result, device_type, train_loader
     ):  # pylint: disable=unused-argument
         """What 'train_step' output, is what 'log' get as input"""
         logits, targets, loss = train_result
@@ -42,7 +43,12 @@ class MLMProvider:
         _, predict = torch.max(logits, dim=-1)
         correct = predict == targets
         accuracy = correct.sum().item() / correct.size(0) / correct.size(1)
-        return iteration // len(train_loader), accuracy, loss
+        return OrderedDict(
+            [
+                ("loss", loss.item()),
+                ("accu", accuracy),
+            ]
+        )
 
     @staticmethod
     def construct_model(config):

@@ -1,5 +1,6 @@
 import torch
 
+from collections import OrderedDict
 from tinymm.CLIP.dataset import CC3MList
 from tinymm.ALBEF.dataset import ALBEFDataset
 from tinymm.ALBEF.model import ALBEF
@@ -25,23 +26,9 @@ class ALBEFProvider:
         targets = targets.cuda()
 
         with ctx:
-            (
-                logits_image,
-                logits_text,
-                labels,
-                logits,
-                targets,
-                loss,
-            ) = model((images, texts, targets))
+            train_result = model((images, texts, targets))
 
-        return (
-            logits_image,
-            logits_text,
-            labels,
-            logits,
-            targets,
-            loss,
-        )  # train_result
+        return train_result
 
     @staticmethod
     def get_accuracy(out, target):
@@ -51,7 +38,7 @@ class ALBEFProvider:
         return accuracy
 
     @staticmethod
-    def get_metrics(train_result, device_type, iteration, train_loader):
+    def get_metrics(train_result, device_type, train_loader):
         """What 'train_step' output, is what 'log' get as input"""
         (
             logits_image,
@@ -59,17 +46,21 @@ class ALBEFProvider:
             labels,
             logits,
             targets,
-            loss,
+            itc_loss,
+            mlm_loss,
+            _,
         ) = train_result
 
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
-        mlm_accu = ALBEFProvider.get_accuracy(logits, targets.view(-1))
-        print(f"mlm accu: {mlm_accu:.4f}")
-        return (
-            iteration // len(train_loader),
-            ALBEFProvider.get_accuracy(logits_image, labels),
-            loss,
+        return OrderedDict(
+            [
+                ("itc_loss", itc_loss.item()),
+                ("mlm_loss", mlm_loss.item()),
+                ("img_accu", ALBEFProvider.get_accuracy(logits_image, labels)),
+                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, labels)),
+                ("mlm_accu", ALBEFProvider.get_accuracy(logits, targets.view(-1))),
+            ]
         )
 
     @staticmethod

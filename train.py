@@ -137,7 +137,10 @@ class Trainer:
             self.config.lr = learning_rate
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
-            cmodel.parameters(), lr=self.config.lr, weight_decay=0.0, amsgrad=True,
+            cmodel.parameters(),
+            lr=self.config.lr,
+            weight_decay=0.0,
+            amsgrad=True,
         )
         best_val_accuracy = 1e-9
         begin = time.time()
@@ -150,18 +153,19 @@ class Trainer:
             train_result = self.train_loop(cmodel, optimizer)
 
             if iteration % self.config.log_iters == 0 and iteration > 0:
-                epoch, accuracy, loss = self.train_provider.get_metrics(
-                    train_result, self.device_type, iteration, self.train_loader
+                metrics = self.train_provider.get_metrics(
+                    train_result, self.device_type, self.train_loader
                 )
+                epoch = iteration // len(self.train_loader)
                 now = time.time()
                 duration = now - begin
                 begin = now
-                print(
-                    (
-                        f"[{epoch:03d} : {iteration:06d}] loss: {loss.item():.4f} "
-                        f"accu: {accuracy:.4f} lr: {lr:.4e} time: {duration:.2f}"
-                    )
-                )
+                messages = [f"[{epoch:03d}: {iteration:06d}]"]
+                for name, val in metrics.items():
+                    messages.append(f"{name}: {val:.3f}")
+                messages.append(f"lr: {lr:.3e}")
+                messages.append(f"time: {duration:.1f}")
+                print(" ".join(messages))
             if iteration % self.config.eval_iters == 0 and iteration > 0:
                 avg_loss, avg_accuracy = self.validate(cmodel)
                 if avg_accuracy > best_val_accuracy:
