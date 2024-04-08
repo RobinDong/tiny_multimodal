@@ -34,12 +34,7 @@ class MLMProvider:
         )  # train_result. The train_result[-1] must be loss
 
     @staticmethod
-    def get_metrics(
-        train_result, device_type, train_loader
-    ):  # pylint: disable=unused-argument
-        """What 'train_step' output, is what 'log' get as input"""
-        logits, targets, loss = train_result
-
+    def calc_metric(logits, targets, loss):
         _, predict = torch.max(logits, dim=-1)
         correct = predict == targets
         accuracy = correct.sum().item() / correct.size(0) / correct.size(1)
@@ -49,6 +44,14 @@ class MLMProvider:
                 ("accu", accuracy),
             ]
         )
+
+    @staticmethod
+    def get_metrics(
+        train_result, device_type, train_loader
+    ):  # pylint: disable=unused-argument
+        """What 'train_step' output, is what 'log' get as input"""
+        logits, targets, loss = train_result
+        return MLMProvider.calc_metric(logits, targets, loss)
 
     @staticmethod
     def construct_model(config):
@@ -68,13 +71,4 @@ class MLMProvider:
         # forward
         with ctx:
             logits, loss = model((texts, targets))
-        # accuracy
-        _, predict = torch.max(logits, dim=-1)
-        correct = predict == targets
-        accuracy = correct.sum().item() / correct.size(0) / correct.size(1)
-        return OrderedDict(
-            [
-                ("loss", loss.item()),
-                ("accu", accuracy),
-            ]
-        )
+        return MLMProvider.calc_metric(logits, targets, loss)
