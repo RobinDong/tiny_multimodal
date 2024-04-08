@@ -68,16 +68,24 @@ class ALBEFProvider:
         return ALBEF(config.model_config)
 
     @staticmethod
-    def get_validate_accuracy(data_entry, model, ctx, device_type):
+    def get_validation_metrics(data_entry, model, ctx, device_type):
         images, texts, targets = data_entry
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
         targets = targets.cuda()
         # forward
         with ctx:
-            _, _, _, logits, targets, loss = model((images, texts, targets))
+            logits_image, logits_text, labels, logits, targets, _, _, loss = model(
+                (images, texts, targets)
+            )
         # accuracy
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
-        accuracy = ALBEFProvider.get_accuracy(logits, targets.view(-1))
-        return accuracy, loss.item()
+        return OrderedDict(
+            [
+                ("loss", loss.item()),
+                ("img_accu", ALBEFProvider.get_accuracy(logits_image, labels)),
+                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, labels)),
+                ("mlm_accu", ALBEFProvider.get_accuracy(logits, targets.view(-1))),
+            ]
+        )

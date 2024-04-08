@@ -48,7 +48,7 @@ class CLIPProvider:
         return CLIP(config.model_config)
 
     @staticmethod
-    def get_validate_accuracy(data_entry, model, ctx, device_type):
+    def get_validation_metrics(data_entry, model, ctx, device_type):
         images, texts = data_entry
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
@@ -59,4 +59,9 @@ class CLIPProvider:
         _, predict = torch.max(logits_image, dim=-1)
         correct_labels = torch.arange(logits_image.size(0), device=device_type)
         correct = predict == correct_labels
-        return correct.sum().item() / correct.size(0), loss.item()
+        return OrderedDict(
+            [
+                ("loss", loss.item()),
+                ("accu", correct.sum().item() / correct.size(0)),
+            ]
+        )

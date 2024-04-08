@@ -2,6 +2,7 @@ import os
 import fire
 import time
 import math
+from collections import defaultdict
 from importlib import import_module
 from dataclasses import asdict
 
@@ -68,23 +69,22 @@ class Trainer:
     def validate(self, cmodel):
         cmodel.eval()
 
-        total_loss = 0.0
         batch_iter = iter(self.val_loader)
-        sum_accuracy = 0
+        accumulator = defaultdict(float)
         length = len(self.val_loader)
         for _ in range(length - 1):
             data_entry = next(batch_iter)
-            accuracy, loss = self.train_provider.get_validate_accuracy(
+            metrics = self.train_provider.get_validation_metrics(
                 data_entry, cmodel, self.ctx, self.device_type
             )
-            sum_accuracy += accuracy
-            total_loss += loss
+            for key, val in metrics.items():
+                accumulator[key] += val
 
-        avg_loss = total_loss / length
-        avg_accuracy = sum_accuracy / length
+        for key, val in accumulator.items():
+            accumulator[key] /= length
 
         cmodel.train()
-        return avg_loss, avg_accuracy
+        return accumulator
 
     def init(self, resume: str, provider: str):
         if resume:
@@ -167,7 +167,8 @@ class Trainer:
                 messages.append(f"time: {duration:.1f}")
                 print(" ".join(messages))
             if iteration % self.config.eval_iters == 0 and iteration > 0:
-                avg_loss, avg_accuracy = self.validate(cmodel)
+                accumulator = self.validate(cmodel)
+                avg_accuracy = accumulator["accuracy"]
                 if avg_accuracy > best_val_accuracy:
                     checkpoint = {
                         "model": model.state_dict(),
@@ -182,7 +183,10 @@ class Trainer:
                             f"{self.config.model_config.model_name}_{iteration}.pt",
                         ),
                     )
-                print(f"[Eval] loss: {avg_loss:.4f} accuracy: {avg_accuracy:.4f}")
+                messages = ["[Val]"]
+                for name, val in metrics.items():
+                    messages.append(f"{name}: {val:.3f}")
+                print(" ".join(messages))
 
 
 if __name__ == "__main__":

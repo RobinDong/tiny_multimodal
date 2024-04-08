@@ -59,7 +59,7 @@ class MLMProvider:
         return MLM(gconfig)
 
     @staticmethod
-    def get_validate_accuracy(
+    def get_validation_metrics(
         data_entry, model, ctx, device_type
     ):  # pylint: disable=unused-argument
         texts, targets = data_entry
@@ -72,4 +72,9 @@ class MLMProvider:
         _, predict = torch.max(logits, dim=-1)
         correct = predict == targets
         accuracy = correct.sum().item() / correct.size(0) / correct.size(1)
-        return accuracy, loss.item()
+        return OrderedDict(
+            [
+                ("loss", loss.item()),
+                ("accu", accuracy),
+            ]
+        )
