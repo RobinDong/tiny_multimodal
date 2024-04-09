@@ -9,8 +9,8 @@ class ModelConfig:
 @dataclass
 class TrainConfig:
     data_path: tuple = (
-        "/home/robin/Downloads/cc12m",
-        "/home/robin/Downloads/cc3m",
+        # "/home/robin/Downloads/cc12m",
+        # "/home/robin/Downloads/cc3m",
         "/home/robin/Downloads/sbu_caption",
     )
     eval_ratio: float = 0.05

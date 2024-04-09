@@ -16,7 +16,7 @@ class ImageEncoder(nn.Module):
 
         base_model = timm.create_model(
             config.image_encoder_name,
-            pretrained=True,
+            pretrained=False,
             in_chans=3,
             drop_rate=config.image_dropout,
             drop_path_rate=config.image_dropout,
@@ -112,7 +112,7 @@ class ALBEF(nn.Module):
             targets,
             itc_loss,
             mlm_loss,  # pylint: disable=duplicate-code
-            itc_loss + mlm_loss,
+            mlm_loss,
         )
 
 
