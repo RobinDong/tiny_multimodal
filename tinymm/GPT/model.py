@@ -22,6 +22,7 @@ class GPTConfig:
     n_layer: int = 12
     n_head: int = 12
     dropout: float = 0.0
+    is_causal: bool = True
 
 
 class CausalSelfAttention(nn.Module):
@@ -62,7 +63,7 @@ class CausalSelfAttention(nn.Module):
                 value,
                 attn_mask=None,
                 dropout_p=self.config.dropout if self.training else 0,
-                is_causal=True,
+                is_causal=self.config.is_causal,
             )
         else:
             attn = query @ key.transpose(-2, -1) / self.div

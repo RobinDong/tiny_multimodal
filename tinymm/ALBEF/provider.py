@@ -81,11 +81,13 @@ class ALBEFProvider:
         # accuracy
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
+        mlm_accuracy = ALBEFProvider.get_accuracy(logits, targets.view(-1))
         return OrderedDict(
             [
                 ("loss", loss.item()),
                 ("img_accu", ALBEFProvider.get_accuracy(logits_image, labels)),
                 ("txt_accu", ALBEFProvider.get_accuracy(logits_text, labels)),
-                ("mlm_accu", ALBEFProvider.get_accuracy(logits, targets.view(-1))),
+                ("mlm_accu", mlm_accuracy),
+                ("accuracy", mlm_accuracy),
             ]
         )

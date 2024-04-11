@@ -9,7 +9,7 @@ from tinymm.GPT.model import GPTConfig, GPT, Block
 
 
 class ImageEncoder(nn.Module):
-    vit_output_dims: int = 512
+    vit_output_dims: int = 768
 
     def __init__(self, config: ALBEFConfig):
         super().__init__()
@@ -23,7 +23,7 @@ class ImageEncoder(nn.Module):
         )
         layers = list(base_model.children())[:-1]
         self.encoder = nn.Sequential(*layers)
-        self.out_proj = nn.Linear(self.vit_output_dims, config.text_embd)
+        # self.out_proj = nn.Linear(self.vit_output_dims, config.text_embd)
         self.img_proj = nn.Linear(self.vit_output_dims, config.itc_embd)
 
     def get_num_params(self):
@@ -33,7 +33,7 @@ class ImageEncoder(nn.Module):
     def forward(self, inp):
         out = self.encoder(inp)
         last_token = out[:, -1, :]
-        out = self.out_proj(out)
+        # out = self.out_proj(out)
         return self.img_proj(last_token), out
 
 
@@ -59,6 +59,7 @@ class ALBEF(nn.Module):
         super().__init__()
 
         gconfig = GPTConfig(config)
+        gconfig.is_causal = False  # Use bidirectional attention
         self.img_encoder = ImageEncoder(config)
         self.txt_encoder = TextEncoder(gconfig, config)
         print("Image Encoder number of parameters:", self.img_encoder.get_num_params())
