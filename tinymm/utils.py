@@ -1,9 +1,19 @@
 import cv2
+import timm
 import torch
 
 from importlib import import_module
-from tinymm.model_config import TrainConfig
+from tinymm.model_config import TrainConfig, ModelConfig
 
+
+def create_timm_model(config: ModelConfig):
+    return timm.create_model(
+        config.image_encoder_name,
+        pretrained=False,
+        in_chans=3,
+        drop_rate=config.image_dropout,
+        drop_path_rate=config.image_dropout,
+    )
 
 def load_from_checkpoint(checkpoint: str):
     checkpoint = torch.load(checkpoint, map_location="cpu")

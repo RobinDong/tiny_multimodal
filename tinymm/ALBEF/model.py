@@ -1,9 +1,9 @@
-import timm
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 from torch import nn
+from tinymm.utils import create_timm_model
 from tinymm.model_config import ALBEFConfig
 from tinymm.GPT.model import GPTConfig, GPT, Block
 
@@ -14,13 +14,7 @@ class ImageEncoder(nn.Module):
     def __init__(self, config: ALBEFConfig):
         super().__init__()
 
-        base_model = timm.create_model(
-            config.image_encoder_name,
-            pretrained=False,
-            in_chans=3,
-            drop_rate=config.image_dropout,
-            drop_path_rate=config.image_dropout,
-        )
+        base_model = create_timm_model(config)
         layers = list(base_model.children())[:-1]
         self.encoder = nn.Sequential(*layers)
         self.img_proj = nn.Linear(self.vit_output_dims, config.itc_embd)

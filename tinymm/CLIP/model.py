@@ -1,9 +1,9 @@
-import timm
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 from torch import nn
+from tinymm.utils import create_timm_model
 from tinymm.model_config import CLIPConfig
 from tinymm.GPT.model import GPTConfig, GPT
 
@@ -13,13 +13,7 @@ class ImageEncoder(nn.Module):
     def __init__(self, config: CLIPConfig):
         super().__init__()
 
-        base_model = timm.create_model(
-            config.image_encoder_name,
-            pretrained=False,
-            in_chans=3,
-            drop_rate=config.image_dropout,
-            drop_path_rate=config.image_dropout,
-        )
+        base_model = create_timm_model(config)
         layers = list(base_model.children())
         layers[-1].fc = nn.Linear(layers[-1].fc.in_features, config.clip_n_embd)
         self.encoder = nn.Sequential(*layers)
