@@ -15,7 +15,7 @@ class TrainConfig:
     )
     eval_ratio: float = 0.05
     num_workers: int = 4
-    lr: float = 1e-5
+    lr: float = 1e-4
     min_lr: float = 1e-6
     grad_clip: float = 1.0
     seq_len: int = 64
@@ -44,13 +44,13 @@ class CLIPConfig(ModelConfig):
 @dataclass
 class ALBEFConfig(ModelConfig):
     model_name: str = "ALBEF"
-    batch_size: int = 40
-    image_encoder_name: str = "vit_medium_patch16_gap_256"
+    batch_size: int = 32
+    image_encoder_name: str = "vit_base_patch16_reg4_gap_256"
     image_dropout: float = 0.0
     text_encoder_name: str = "GPT"
     text_embd: int = 768
     text_layer: int = 6
     text_head: int = 12
     text_dropout: float = 0.0
-    itc_embd: int = 128  # The original ALBEF use 256 dims for ITC loss
+    itc_embd: int = 256  # The original ALBEF use 256 dims for ITC loss
     multimodal_layer: int = 6
