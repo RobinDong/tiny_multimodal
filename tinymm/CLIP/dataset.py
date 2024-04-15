@@ -50,7 +50,7 @@ class CC3MDataset(data.Dataset):
         self.seq_len = seq_len
         self.enc = tiktoken.get_encoding("gpt2")
 
-    def __getitem__(self, index):
+    def get_raw(self, index):
         img_offset, img_size, txt_offset, txt_size = self.indexes[index][0]
         filename = self.id_to_filename[self.indexes[index][1]]
         with open(filename + ".dat", "rb") as fp:
@@ -62,6 +62,9 @@ class CC3MDataset(data.Dataset):
 
         ids = self.enc.encode_ordinary(text)
         ids = np.array(ids, dtype=np.int64)
+        return image, ids
+
+    def raw_to_ds(self, image, ids):
         length = len(ids)
         if length > self.seq_len:
             ids = ids[: self.seq_len]
@@ -69,6 +72,10 @@ class CC3MDataset(data.Dataset):
             ids = np.pad(ids, (0, (self.seq_len - length)), "constant")
         imgs = image.astype("float32") / 255.0
         return imgs, ids
+
+    def __getitem__(self, index):
+        imgs, ids = self.get_raw(index)
+        return self.raw_to_ds(imgs, ids)
 
     def __len__(self):
         return len(self.indexes)
