@@ -142,7 +142,6 @@ class Trainer:
             weight_decay=0.0,
             amsgrad=True,
         )
-        best_val_accuracy = 1e-9
         begin = time.time()
 
         for iteration in range(iter_start, self.config.max_iters):
@@ -169,20 +168,19 @@ class Trainer:
             if iteration % self.config.eval_iters == 0 and iteration > 0:
                 accumulator = self.validate(cmodel)
                 avg_accuracy = accumulator["accuracy"]
-                if avg_accuracy > best_val_accuracy:
-                    checkpoint = {
-                        "model": model.state_dict(),
-                        "iteration": iteration,
-                        "train_config": asdict(self.config),
-                        "eval_accuracy": avg_accuracy,
-                    }
-                    torch.save(
-                        checkpoint,
-                        os.path.join(
-                            ckpt_dir,
-                            f"{self.config.model_config.model_name}_{iteration}.pt",
-                        ),
-                    )
+                checkpoint = {
+                    "model": model.state_dict(),
+                    "iteration": iteration,
+                    "train_config": asdict(self.config),
+                    "eval_accuracy": avg_accuracy,
+                }
+                torch.save(
+                    checkpoint,
+                    os.path.join(
+                        ckpt_dir,
+                        f"{self.config.model_config.model_name}_{iteration}.pt",
+                    ),
+                )
                 messages = ["[Val]"]
                 for name, val in metrics.items():
                     messages.append(f"{name}: {val:.3f}")
