@@ -1,9 +1,9 @@
 import glob
 import cv2
-import tiktoken
 
 import numpy as np
 from torch.utils import data
+from transformers import BertTokenizerFast
 
 
 class CC3MList:
@@ -48,7 +48,7 @@ class CC3MDataset(data.Dataset):
         self.id_to_filename = id_to_filename
         self.indexes = lst
         self.seq_len = seq_len
-        self.enc = tiktoken.get_encoding("gpt2")
+        self.enc = BertTokenizerFast.from_pretrained("google-bert/bert-base-uncased")
 
     def get_raw(self, index):
         img_offset, img_size, txt_offset, txt_size = self.indexes[index][0]
@@ -60,7 +60,7 @@ class CC3MDataset(data.Dataset):
             fp.seek(txt_offset)
             text = fp.read(txt_size).decode("utf-8")
 
-        ids = self.enc.encode_ordinary(text)
+        ids = self.enc(text)["input_ids"]
         ids = np.array(ids, dtype=np.int64)
         return image, ids
 
