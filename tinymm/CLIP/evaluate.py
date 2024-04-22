@@ -1,11 +1,11 @@
 import glob
 import fire
-import tiktoken
 import numpy as np
 
 import torch
 
 from tqdm import tqdm
+from transformers import BertTokenizerFast
 from tinymm.utils import load_from_checkpoint, load_image
 
 
@@ -34,12 +34,12 @@ class Imagenet1K:
 
         self.model = model
         # embedings of all categories
-        enc = tiktoken.get_encoding("gpt2")
+        enc = BertTokenizerFast.from_pretrained("google-bert/bert-base-uncased")
         cat_embds = []
         print("Compute embeddings for all categories...")
         for index in tqdm(range(1, self.nr_categories + 1)):
             text = f"A photo of a {self.cats[index]}"
-            ids = enc.encode_ordinary(text)
+            ids = enc(text)
             ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
             ids = torch.tensor(ids).unsqueeze(0)
             with torch.no_grad():

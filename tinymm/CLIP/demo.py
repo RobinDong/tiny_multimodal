@@ -4,11 +4,11 @@ import glob
 import pickle
 
 import torch
-import tiktoken
 import numpy as np
 import streamlit as st
 
 from tqdm import tqdm
+from transformers import BertTokenizerFast
 from tinymm.utils import load_from_checkpoint, load_image
 
 
@@ -20,7 +20,7 @@ class Demo:
 
     def __init__(self):
         self.images = {}
-        self.enc = tiktoken.get_encoding("gpt2")
+        self.enc = BertTokenizerFast.from_pretrained("google-bert/bert-base-uncased")
 
     def load_model(self, checkpoint: str):
         model = load_from_checkpoint(checkpoint)
@@ -56,7 +56,7 @@ class Demo:
         text = st.text_input("Input:")
         if not text:
             return
-        ids = self.enc.encode_ordinary(text)
+        ids = self.enc(text)
         ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
         ids = torch.tensor(ids).unsqueeze(0)
         txt_embd = model.txt_encoder(ids)

@@ -1,5 +1,5 @@
 fire
 torch
 timm
-tiktoken
+transformers
 opencv-python
