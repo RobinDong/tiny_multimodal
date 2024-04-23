@@ -104,8 +104,8 @@ class ALBEF(nn.Module):
             logits,
             targets,
             itc_loss,
-            10 * mlm_loss,  # pylint: disable=duplicate-code
-            itc_loss + 10 * mlm_loss,
+            mlm_loss,  # pylint: disable=duplicate-code
+            itc_loss + mlm_loss,
         )
 
 
