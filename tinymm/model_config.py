@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class ModelConfig:
     model_name: str
+    model_size: str
 
 
 @dataclass
@@ -28,22 +29,57 @@ class TrainConfig:
 
 
 @dataclass
-class CLIPConfig(ModelConfig):
+class CLIPBaseConfig(ModelConfig):
     model_name: str = "CLIP"
+    model_size: str = "Base"
     batch_size: int = 64
-    image_encoder_name: str = "convnextv2_tiny"
+    image_encoder_name: str = "vit_base_patch16_reg4_gap_256"
+    image_embd: int = 768
+    image_dropout: float = 0.0
+    text_encoder_name: str = "GPT"
+    text_embd: int = 768
+    text_layer: int = 12
+    text_head: int = 12
+    text_dropout: float = 0.0
+    clip_n_embd: int = 768
+
+
+@dataclass
+class CLIPSmallConfig(ModelConfig):
+    model_name: str = "CLIP"
+    model_size: str = "Small"
+    batch_size: int = 128
+    image_encoder_name: str = "vit_medium_patch16_reg4_gap_256"
+    image_embd: int = 512
     image_dropout: float = 0.0
     text_encoder_name: str = "GPT"
     text_embd: int = 512
-    text_layer: int = 30
+    text_layer: int = 12
     text_head: int = 8
     text_dropout: float = 0.0
     clip_n_embd: int = 512
 
 
 @dataclass
-class ALBEFConfig(ModelConfig):
+class CLIPTinyConfig(ModelConfig):
+    model_name: str = "CLIP"
+    model_size: str = "Tiny"
+    batch_size: int = 96
+    image_encoder_name: str = "convnextv2_tiny"
+    image_embd: int = 384
+    image_dropout: float = 0.0
+    text_encoder_name: str = "GPT"
+    text_embd: int = 384
+    text_layer: int = 12
+    text_head: int = 8
+    text_dropout: float = 0.0
+    clip_n_embd: int = 384
+
+
+@dataclass
+class ALBEFBaseConfig(ModelConfig):
     model_name: str = "ALBEF"
+    model_size: str = "Base"
     batch_size: int = 32
     image_encoder_name: str = "vit_base_patch16_reg4_gap_256"
     image_dropout: float = 0.0

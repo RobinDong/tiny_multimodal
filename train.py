@@ -10,6 +10,7 @@ import torch
 from torch.utils import data
 from tinymm.model_config import TrainConfig
 
+VALID_MODEL_SIZE = {"Large", "Base", "Small", "Tiny"}
 ckpt_dir = "out"
 
 
@@ -86,14 +87,17 @@ class Trainer:
         cmodel.train()
         return accumulator
 
-    def init(self, resume: str, provider: str):
+    def init(self, resume: str, provider: str, model_size: str):
         if resume:
             checkpoint = torch.load(resume, map_location=self.device_type)
             state_dict = checkpoint["model"]
             self.config = TrainConfig(**checkpoint["train_config"])
             iter_start = checkpoint["iteration"] + 1
             module = import_module("tinymm.model_config")
-            class_ = getattr(module, f"{self.config.model_config['model_name']}Config")
+            mconfig = self.config.model_config
+            class_ = getattr(
+                module, f"{mconfig['model_name']}{mconfig['model_size']}Config"
+            )
             self.config.model_config = class_(**self.config.model_config)
             model_name = self.config.model_config.model_name
             module = import_module(f"tinymm.{model_name}.provider")
@@ -104,8 +108,8 @@ class Trainer:
             print(f"Resume from {iter_start - 1} for model {model_name}...")
         else:
             iter_start = 1
-            module = import_module(f"tinymm.{provider}.model")
-            class_ = getattr(module, f"{provider}Config")
+            module = import_module("tinymm.model_config")
+            class_ = getattr(module, f"{provider}{model_size}Config")
             self.config.model_config = class_()
             module = import_module(f"tinymm.{provider}.provider")
             class_ = getattr(module, f"{provider}Provider")
@@ -131,8 +135,12 @@ class Trainer:
         )
         return model, iter_start
 
-    def train(self, resume="", provider="CLIP", learning_rate=None):
-        model, iter_start = self.init(resume, provider)
+    def train(self, resume="", provider="CLIP", model_size="Base", learning_rate=None):
+        model_size = model_size.capitalize()
+        if model_size not in VALID_MODEL_SIZE:
+            print(f"Invalid value for argument 'model_size'. Choices {VALID_MODEL_SIZE}")
+            return
+        model, iter_start = self.init(resume, provider, model_size)
         if learning_rate:
             self.config.lr = learning_rate
         cmodel = torch.compile(model)

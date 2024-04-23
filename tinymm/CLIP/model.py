@@ -4,18 +4,23 @@ import torch.nn.functional as F
 
 from torch import nn
 from tinymm.utils import create_timm_model
-from tinymm.model_config import CLIPConfig
+from tinymm.model_config import ModelConfig, CLIPBaseConfig
 from tinymm.GPT.model import GPTConfig, GPT
 
 
 class ImageEncoder(nn.Module):
 
-    def __init__(self, config: CLIPConfig):
+    def __init__(self, config: ModelConfig):
         super().__init__()
 
         base_model = create_timm_model(config)
         layers = list(base_model.children())
-        layers[-1].fc = nn.Linear(layers[-1].fc.in_features, config.clip_n_embd)
+        if hasattr(layers[-1], "fc"):
+            layers[-1].fc = nn.Linear(layers[-1].fc.in_features, config.clip_n_embd)
+            self.last_proj = None
+        else:
+            layers = layers[:-1]
+            self.last_proj = nn.Linear(config.image_embd, config.clip_n_embd)
         self.encoder = nn.Sequential(*layers)
 
     def get_num_params(self):
@@ -23,12 +28,16 @@ class ImageEncoder(nn.Module):
         return n_params
 
     def forward(self, inp):
+        if self.last_proj:
+            out = self.encoder(inp)
+            last_token = out[:, -1, :]
+            return self.last_proj(last_token)
         return self.encoder(inp)
 
 
 class TextEncoder(nn.Module):
 
-    def __init__(self, config: CLIPConfig):
+    def __init__(self, config: ModelConfig):
         super().__init__()
 
         gconfig = GPTConfig(config)
@@ -47,7 +56,7 @@ class TextEncoder(nn.Module):
 
 class CLIP(nn.Module):
 
-    def __init__(self, config: CLIPConfig):
+    def __init__(self, config: ModelConfig):
         super().__init__()
 
         self.img_encoder = ImageEncoder(config)
@@ -77,7 +86,7 @@ class CLIP(nn.Module):
 
 
 if __name__ == "__main__":
-    config = CLIPConfig()
+    config = CLIPBaseConfig()
     clip = CLIP(config)
 
     imgs = torch.rand(8, 3, 256, 256)
