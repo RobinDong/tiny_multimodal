@@ -4,14 +4,14 @@ import torch.nn.functional as F
 
 from torch import nn
 from tinymm.utils import create_timm_model
-from tinymm.model_config import ALBEFConfig
+from tinymm.model_config import ModelConfig, ALBEFBaseConfig
 from tinymm.GPT.model import GPTConfig, GPT, Block
 
 
 class ImageEncoder(nn.Module):
     vit_output_dims: int = 768
 
-    def __init__(self, config: ALBEFConfig):
+    def __init__(self, config: ModelConfig):
         super().__init__()
 
         base_model = create_timm_model(config)
@@ -110,7 +110,7 @@ class ALBEF(nn.Module):
 
 
 if __name__ == "__main__":
-    config = ALBEFConfig()
+    config = ALBEFBaseConfig()
     encoder = ImageEncoder(config)
     image = torch.rand([64, 3, 256, 256])
     tok, out = encoder(image)
