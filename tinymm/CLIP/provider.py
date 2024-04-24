@@ -29,17 +29,22 @@ class CLIPProvider:
         return logits_image, logits_text, loss  # train_result
 
     @staticmethod
+    def get_accuracy(out, target):
+        _, predict = torch.max(out, dim=-1)
+        correct = predict == target
+        accuracy = correct.sum().item() / correct.size(0)
+        return accuracy
+
+    @staticmethod
     def get_metrics(train_result, device_type, train_loader):
         """What 'train_step' output, is what 'log' get as input"""
-        logits_image, _, loss = train_result
-        _, predict = torch.max(logits_image, dim=-1)
+        logits_image, logits_text, loss = train_result
         correct_labels = torch.arange(logits_image.size(0), device=device_type)
-        correct = predict == correct_labels
-        accuracy = correct.sum().item() / correct.size(0)
         return OrderedDict(
             [
                 ("loss", loss.item()),
-                ("accu", accuracy),
+                ("img_accu", CLIPProvider.get_accuracy(logits_image, correct_labels)),
+                ("txt_accu", CLIPProvider.get_accuracy(logits_text, correct_labels)),
             ]
         )
 
@@ -54,14 +59,13 @@ class CLIPProvider:
         texts = texts.cuda()
         # forward
         with ctx:
-            logits_image, _, loss = model((images, texts))
+            logits_image, logits_text, loss = model((images, texts))
         # accuracy
-        _, predict = torch.max(logits_image, dim=-1)
         correct_labels = torch.arange(logits_image.size(0), device=device_type)
-        correct = predict == correct_labels
         return OrderedDict(
             [
                 ("loss", loss.item()),
-                ("accu", correct.sum().item() / correct.size(0)),
+                ("img_accu", CLIPProvider.get_accuracy(logits_image, correct_labels)),
+                ("txt_accu", CLIPProvider.get_accuracy(logits_text, correct_labels)),
             ]
         )
