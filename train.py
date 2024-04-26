@@ -190,7 +190,7 @@ class Trainer:
                     ),
                 )
                 messages = ["[Val]"]
-                for name, val in metrics.items():
+                for name, val in accumulator.items():
                     messages.append(f"{name}: {val:.3f}")
                 print(" ".join(messages))
 
