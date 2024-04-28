@@ -43,10 +43,13 @@ class ALBEFProvider:
         (
             logits_image,
             logits_text,
-            labels,
+            itc_labels,
             logits,
             targets,
+            itm_out,
+            match_labels,
             itc_loss,
+            itm_loss,
             mlm_loss,
             _,
         ) = train_result
@@ -56,9 +59,11 @@ class ALBEFProvider:
         return OrderedDict(
             [
                 ("itc_loss", itc_loss.item()),
+                ("itm_loss", itm_loss.item()),
                 ("mlm_loss", mlm_loss.item()),
-                ("img_accu", ALBEFProvider.get_accuracy(logits_image, labels)),
-                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, labels)),
+                ("img_accu", ALBEFProvider.get_accuracy(logits_image, itc_labels)),
+                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, itc_labels)),
+                ("itm_accu", ALBEFProvider.get_accuracy(itm_out, match_labels)),
                 ("mlm_accu", ALBEFProvider.get_accuracy(logits, targets.view(-1))),
             ]
         )
@@ -75,9 +80,19 @@ class ALBEFProvider:
         targets = targets.cuda()
         # forward
         with ctx:
-            logits_image, logits_text, labels, logits, targets, _, _, loss = model(
-                (images, texts, targets)
-            )
+            (
+                logits_image,
+                logits_text,
+                itc_labels,
+                logits,
+                targets,
+                itm_out,
+                match_labels,
+                _,
+                _,
+                _,
+                loss,
+            ) = model((images, texts, targets))
         # accuracy
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
@@ -85,8 +100,9 @@ class ALBEFProvider:
         return OrderedDict(
             [
                 ("loss", loss.item()),
-                ("img_accu", ALBEFProvider.get_accuracy(logits_image, labels)),
-                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, labels)),
+                ("img_accu", ALBEFProvider.get_accuracy(logits_image, itc_labels)),
+                ("txt_accu", ALBEFProvider.get_accuracy(logits_text, itc_labels)),
+                ("itm_accu", ALBEFProvider.get_accuracy(itm_out, match_labels)),
                 ("mlm_accu", mlm_accuracy),
                 ("accuracy", mlm_accuracy),
             ]

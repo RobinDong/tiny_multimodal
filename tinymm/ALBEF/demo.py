@@ -8,8 +8,6 @@ import streamlit as st
 from transformers import BertTokenizerFast
 from tinymm.utils import load_from_checkpoint
 
-MASK_ID = 50258
-
 
 class Demo:
     image_path: str = "/home/robin/Downloads/imagenet/val"
@@ -48,7 +46,7 @@ class Demo:
         images = torch.tensor(image).unsqueeze(0)
         images = images.permute(0, 3, 1, 2)
         with torch.no_grad():
-            _, _, _, logits, _, _, _, _ = model((images, ids, ids))
+            logits = model((images, ids, None))
         print("logits:", logits.size(), logits)
         _, predict = torch.max(logits, dim=-1)
         print("predict:", predict.size(), predict)
