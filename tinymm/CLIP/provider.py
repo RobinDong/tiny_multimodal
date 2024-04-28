@@ -62,10 +62,13 @@ class CLIPProvider:
             logits_image, logits_text, loss = model((images, texts))
         # accuracy
         correct_labels = torch.arange(logits_image.size(0), device=device_type)
+        image_accuracy = CLIPProvider.get_accuracy(logits_image, correct_labels)
+        text_accuracy = CLIPProvider.get_accuracy(logits_text, correct_labels)
         return OrderedDict(
             [
                 ("loss", loss.item()),
-                ("img_accu", CLIPProvider.get_accuracy(logits_image, correct_labels)),
-                ("txt_accu", CLIPProvider.get_accuracy(logits_text, correct_labels)),
+                ("img_accu", image_accuracy),
+                ("txt_accu", text_accuracy),
+                ("accuracy", (image_accuracy + text_accuracy) / 2.0),
             ]
         )
