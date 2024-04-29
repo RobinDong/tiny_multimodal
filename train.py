@@ -143,6 +143,7 @@ class Trainer:
         model, iter_start = self.init(resume, provider, model_size)
         if learning_rate:
             self.config.lr = learning_rate
+            iter_start = 0
         cmodel = torch.compile(model)
         optimizer = torch.optim.AdamW(
             cmodel.parameters(),
