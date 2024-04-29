@@ -20,7 +20,8 @@ def load_from_checkpoint(checkpoint: str):
     state_dict = checkpoint["model"]
     config = TrainConfig(**checkpoint["train_config"])
     module = import_module("tinymm.model_config")
-    class_ = getattr(module, f"{config.model_config['model_name']}Config")
+    mconfig = config.model_config
+    class_ = getattr(module, f"{mconfig['model_name']}{mconfig['model_size']}Config")
     config.model_config = class_(**config.model_config)
     model_name = config.model_config.model_name
     module = import_module(f"tinymm.{model_name}.provider")
