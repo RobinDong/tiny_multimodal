@@ -29,6 +29,7 @@ class CC3MList:
                 file_id = filename_to_id[filename]
             for item in index:
                 self.indexes.append((item, file_id))
+        np.random.shuffle(self.indexes)
         print("Dataset size:", len(self.indexes))
         self.div = int(len(self.indexes) * (1 - eval_ratio))
 
