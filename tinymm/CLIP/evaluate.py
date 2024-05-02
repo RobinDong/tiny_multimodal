@@ -39,7 +39,7 @@ class Imagenet1K:
         print("Compute embeddings for all categories...")
         for index in tqdm(range(1, self.nr_categories + 1)):
             text = f"A photo of a {self.cats[index]}"
-            ids = enc(text)
+            ids = enc(text)["input_ids"]
             ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
             ids = torch.tensor(ids).unsqueeze(0)
             with torch.no_grad():

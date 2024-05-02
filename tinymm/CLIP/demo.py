@@ -56,7 +56,7 @@ class Demo:
         text = st.text_input("Input:")
         if not text:
             return
-        ids = self.enc(text)
+        ids = self.enc(text)["input_ids"]
         ids = np.pad(ids, (0, (self.seq_len - len(ids))), "constant")
         ids = torch.tensor(ids).unsqueeze(0)
         txt_embd = model.txt_encoder(ids)
