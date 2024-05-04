@@ -5,9 +5,12 @@ import numpy as np
 from torch.utils import data
 from transformers import BertTokenizerFast
 
+SEED = 20240502
+
 
 class CC3MList:
     def __init__(self, pathes, eval_ratio):
+        np.random.seed(SEED)
         # list all index(.npy) files
         lst = []
         for path in pathes:

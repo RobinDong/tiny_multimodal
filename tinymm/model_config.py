@@ -11,6 +11,7 @@ class ModelConfig:
 class TrainConfig:
     data_path: tuple = (
         "/home/robin/Downloads/cc12m",
+        "/data/coco_captions/",
         "/home/robin/Downloads/cc3m",
         "/home/robin/Downloads/sbu_caption",
     )
@@ -80,7 +81,7 @@ class CLIPTinyConfig(ModelConfig):
 class ALBEFBaseConfig(ModelConfig):
     model_name: str = "ALBEF"
     model_size: str = "Base"
-    batch_size: int = 32
+    batch_size: int = 30
     image_encoder_name: str = "vit_base_patch16_reg4_gap_256"
     image_dropout: float = 0.0
     text_encoder_name: str = "GPT"
