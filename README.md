@@ -24,7 +24,7 @@ Unlike the popular "large" models, all the models in this repo will be restricte
 ### create environment
 
 ```
-conda create -n tinym python=3.12
+conda create -n tinym python=3.10
 conda activate tinym
 
 git clone git@github.com:RobinDong/tiny_multimodal.git
