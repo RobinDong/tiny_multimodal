@@ -14,7 +14,9 @@ class CC3MList:
         # list all index(.npy) files
         lst = []
         for path in pathes:
-            lst += glob.glob(f"{path}/*.npy")
+            tlst = glob.glob(f"{path}/*.npy")
+            assert len(tlst) > 0, f"There is no files in {path}"
+            lst += tlst
         np.random.shuffle(lst)
         filename_to_id = {}
         self._id_to_filename = {}
