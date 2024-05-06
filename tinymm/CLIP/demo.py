@@ -13,7 +13,7 @@ from tinymm.utils import load_from_checkpoint, load_image
 
 
 class Demo:
-    image_path: str = "/home/robin/Downloads/imagenet/val"
+    image_paths: list[str] = ["/data/imagenet/val", "/data/imagenet/test"]
     image_size: tuple = (256, 256)
     seq_len: int = 64
     embd_path: str = "embd.pkl"
@@ -27,13 +27,15 @@ class Demo:
         return model
 
     def build_embeddings(self, model, cuda):
-        model.eval()
         if os.path.exists(self.embd_path):
             with open(self.embd_path, "rb") as fp:
                 self.images = pickle.load(fp)
             return
 
-        img_lst = glob.glob(f"{self.image_path}/*.JPEG")
+        img_lst = []
+        for path in self.image_paths:
+            img_lst += glob.glob(f"{path}/*.JPEG")
+        print(f"Number of images: {len(img_lst)}")
         for image_name in tqdm(img_lst):
             image = load_image(image_name, self.image_size)
             model.img_encoder = model.img_encoder
@@ -51,6 +53,7 @@ class Demo:
 
     def start(self, checkpoint: str, cuda: bool = False):
         model = self.load_model(checkpoint)
+        model.eval()
         self.build_embeddings(model, cuda)
 
         text = st.text_input("Input:")
