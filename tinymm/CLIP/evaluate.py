@@ -10,8 +10,8 @@ from tinymm.utils import load_from_checkpoint, load_image
 
 
 class Imagenet1K:
-    image_path: str = "/home/robin/Downloads/imagenet/val"
-    map_file_path: str = "/home/robin/Downloads/imagenet_map.txt"
+    image_path: str = "/data/imagenet/val"
+    map_file_path: str = "/data/imagenet/imagenet_map.txt"
     nr_categories: int = 1000
     seq_len: int = 64
     image_size: tuple = (256, 256)

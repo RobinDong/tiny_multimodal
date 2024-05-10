@@ -10,10 +10,10 @@ class ModelConfig:
 @dataclass
 class TrainConfig:
     data_path: tuple = (
-        "/home/robin/Downloads/cc12m",
-        "/data/coco_captions/",
-        "/home/robin/Downloads/cc3m",
-        "/home/robin/Downloads/sbu_caption",
+        "/data/cc12m",
+        "/data/coco_captions",
+        "/data/cc3m",
+        "/data/sbu_caption",
     )
     eval_ratio: float = 0.05
     num_workers: int = 4
