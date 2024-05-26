@@ -116,7 +116,7 @@ class Trainer:
             self.train_provider = class_(self.config)
             model = self.train_provider.construct_model(self.config).cuda()
 
-        train_ds, eval_ds = self.train_provider.get_datasets(config)
+        train_ds, eval_ds = self.train_provider.get_datasets(self.config)
         self.train_loader = data.DataLoader(
             train_ds,
             self.config.model_config.batch_size,
@@ -138,7 +138,9 @@ class Trainer:
     def train(self, resume="", provider="CLIP", model_size="Base", learning_rate=None):
         model_size = model_size.capitalize()
         if model_size not in VALID_MODEL_SIZE:
-            print(f"Invalid value for argument 'model_size'. Choices {VALID_MODEL_SIZE}")
+            print(
+                f"Invalid value for argument 'model_size'. Choices {VALID_MODEL_SIZE}"
+            )
             return
         model, iter_start = self.init(resume, provider, model_size)
         if learning_rate:
@@ -173,7 +175,7 @@ class Trainer:
                     messages.append(f"{name}: {val:.3f}")
                 messages.append(f"lr: {lr:.3e}")
                 messages.append(f"time: {duration:.1f}")
-                print(" ".join(messages))
+                print(" ".join(messages), flush=True)
             if iteration % self.config.eval_iters == 0 and iteration > 0:
                 accumulator = self.validate(cmodel)
                 avg_accuracy = accumulator["accuracy"]
@@ -193,7 +195,7 @@ class Trainer:
                 messages = ["[Val]"]
                 for name, val in accumulator.items():
                     messages.append(f"{name}: {val:.3f}")
-                print(" ".join(messages))
+                print(" ".join(messages), flush=True)
 
 
 if __name__ == "__main__":
