@@ -1,6 +1,8 @@
 import torch
+import torch.nn.functional as F
 
 from collections import OrderedDict
+
 from tinymm.CLIP.dataset import CC3MList
 from tinymm.ALBEF.dataset import ALBEFDataset
 from tinymm.ALBEF.model import ALBEF
@@ -20,13 +22,12 @@ class ALBEFProvider:
 
     @staticmethod
     def train_step(model, data_entry, ctx):
-        images, texts, targets = data_entry
+        images, texts = data_entry
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
-        targets = targets.cuda()
 
         with ctx:
-            train_result = model((images, texts, targets))
+            train_result = model((images, texts))
 
         return train_result
 
@@ -74,10 +75,9 @@ class ALBEFProvider:
 
     @staticmethod
     def get_validation_metrics(data_entry, model, ctx, device_type):
-        images, texts, targets = data_entry
+        images, texts = data_entry
         images = images.cuda().permute(0, 3, 1, 2)
         texts = texts.cuda()
-        targets = targets.cuda()
         # forward
         with ctx:
             (
@@ -92,14 +92,17 @@ class ALBEFProvider:
                 _,
                 _,
                 loss,
-            ) = model((images, texts, targets))
+            ) = model((images, texts))
         # accuracy
         batch_size, seq_len, _ = logits.size()
         logits = logits.view(batch_size * seq_len, -1)
-        mlm_accuracy = ALBEFProvider.get_accuracy(logits, targets.view(-1))
+        targets = targets.view(-1)
+        mlm_accuracy = ALBEFProvider.get_accuracy(logits, targets)
+        mlm_loss = F.cross_entropy(logits, targets)
         return OrderedDict(
             [
                 ("loss", loss.item()),
+                ("mlm_loss", mlm_loss.item()),
                 ("img_accu", ALBEFProvider.get_accuracy(logits_image, itc_labels)),
                 ("txt_accu", ALBEFProvider.get_accuracy(logits_text, itc_labels)),
                 ("itm_accu", ALBEFProvider.get_accuracy(itm_out, match_labels)),

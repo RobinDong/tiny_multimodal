@@ -11,7 +11,7 @@ from tinymm.utils import load_from_checkpoint
 
 class Demo:
     image_path: str = "/home/robin/Downloads/imagenet/val"
-    image_size: tuple = (256, 256)
+    image_size: tuple = (224, 224)
     seq_len: int = 64
 
     def __init__(self):
@@ -28,11 +28,13 @@ class Demo:
         uploaded_file = st.file_uploader(
             "Choose a image file", type=["jpg", "png", "webp"]
         )
-        if uploaded_file is not None:
-            file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-            image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            image = cv2.resize(image, self.image_size)
-            st.image(image, channels="BGR")
+        if not uploaded_file:
+            return
+
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        image = cv2.resize(image, self.image_size)
+        st.image(image, channels="BGR")
 
         text = st.text_input("Input:")
         if not text:
@@ -46,7 +48,7 @@ class Demo:
         images = torch.tensor(image).unsqueeze(0)
         images = images.permute(0, 3, 1, 2)
         with torch.no_grad():
-            logits = model((images, ids, None))
+            logits = model((images, ids), True)
         print("logits:", logits.size(), logits)
         _, predict = torch.max(logits, dim=-1)
         print("predict:", predict.size(), predict)
