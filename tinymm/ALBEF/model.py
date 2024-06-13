@@ -91,13 +91,21 @@ class ALBEF(nn.Module):
         targets[~masked_indices] = -100
 
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-        indices_replaced = torch.bernoulli(torch.full(ids.shape, 0.8)).bool() & masked_indices
+        indices_replaced = (
+            torch.bernoulli(torch.full(ids.shape, 0.8)).bool() & masked_indices
+        )
         ids[indices_replaced] = self.enc.mask_token_id
 
         # 10% of the time, we replace masked input tokens with random word
-        indices_random = torch.bernoulli(torch.full(ids.shape, 0.5)).bool() & masked_indices & ~indices_replaced
+        indices_random = (
+            torch.bernoulli(torch.full(ids.shape, 0.5)).bool()
+            & masked_indices
+            & ~indices_replaced
+        )
         vocab_size = self.txt_encoder.encoder.config.vocab_size
-        random_words = torch.randint(vocab_size, ids.shape, dtype=torch.long).to(ids.device)
+        random_words = torch.randint(vocab_size, ids.shape, dtype=torch.long).to(
+            ids.device
+        )
         ids[indices_random] = random_words[indices_random]
         # The rest of the time (10% of the time) we keep the masked input tokens unchanged
 
@@ -148,7 +156,9 @@ class ALBEF(nn.Module):
         itm_loss = F.cross_entropy(itm_out, itm_labels)
         # MLM loss
         if inference:
-            return self.txt_encoder.encoder.lm_head(out[:batch_size, -text_seq_len + 1 :, :])
+            return self.txt_encoder.encoder.lm_head(
+                out[:batch_size, -text_seq_len + 1 :, :]
+            )
         masked_texts, targets = self.mask(texts.clone())
         _, mtxt_feature = self.txt_encoder(masked_texts)
         out = torch.cat((img_feature, mtxt_feature), dim=1)
