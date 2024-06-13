@@ -18,10 +18,13 @@ class CLIPProvider:
         return train_ds, eval_ds
 
     @staticmethod
-    def train_step(model, data_entry, ctx):
+    def extract_data_entry(data_entry):
         images, texts = data_entry
-        images = images.cuda().permute(0, 3, 1, 2)
-        texts = texts.cuda()
+        return images.cuda().permute(0, 3, 1, 2), texts.cuda()
+
+    @staticmethod
+    def train_step(model, data_entry, ctx):
+        images, texts = CLIPProvider.extract_data_entry(data_entry)
 
         with ctx:
             logits_image, logits_text, loss = model((images, texts))
@@ -54,9 +57,7 @@ class CLIPProvider:
 
     @staticmethod
     def get_validation_metrics(data_entry, model, ctx, device_type):
-        images, texts = data_entry
-        images = images.cuda().permute(0, 3, 1, 2)
-        texts = texts.cuda()
+        images, texts = CLIPProvider.extract_data_entry(data_entry)
         # forward
         with ctx:
             logits_image, logits_text, loss = model((images, texts))
