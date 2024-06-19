@@ -53,8 +53,9 @@ class Demo:
         _, predict = torch.max(logits, dim=-1)
         print("predict:", predict.size(), predict)
         decoded = self.enc.decode(predict[0].tolist())
-        st.text(decoded)
-        print("decoded:", decoded)
+        ans = decoded.split(",")[0]
+        st.text(ans)
+        print("ans:", ans)
 
 
 if __name__ == "__main__":

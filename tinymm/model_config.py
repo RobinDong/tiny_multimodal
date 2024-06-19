@@ -15,7 +15,7 @@ class TrainConfig:
         "/data/cc3m",
         "/data/sbu_caption",
     )
-    eval_ratio: float = 0.05
+    eval_ratio: float = 0.02
     num_workers: int = 4
     lr: float = 1e-4
     min_lr: float = 1e-6
@@ -24,8 +24,8 @@ class TrainConfig:
     log_iters: int = 2000
     eval_iters: int = 20000
     warmup_iters: int = 4000
-    lr_decay_iters: int = 512000
-    max_iters: int = 1000000
+    lr_decay_iters: int = 1024000
+    max_iters: int = 2048000
     model_config: ModelConfig = None
 
 
@@ -81,8 +81,8 @@ class CLIPTinyConfig(ModelConfig):
 class ALBEFBaseConfig(ModelConfig):
     model_name: str = "ALBEF"
     model_size: str = "Base"
-    batch_size: int = 30
-    image_encoder_name: str = "vit_base_patch16_reg4_gap_256"
+    batch_size: int = 26
+    image_encoder_name: str = "vit_base_patch16_224"
     image_dropout: float = 0.0
     text_encoder_name: str = "GPT"
     text_embd: int = 768
