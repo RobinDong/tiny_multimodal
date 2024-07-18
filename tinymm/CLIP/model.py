@@ -41,6 +41,7 @@ class TextEncoder(nn.Module):
         super().__init__()
 
         gconfig = GPTConfig(config)
+        gconfig.is_causal = False  # Use bidirectional attention
         self.encoder = GPT(gconfig)
         self.txt_proj = nn.Linear(gconfig.n_embd, config.clip_n_embd)
 
