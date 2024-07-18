@@ -44,7 +44,7 @@ class TextEncoder(nn.Module):
 
     def forward(self, inp):
         out = self.encoder(inp)
-        last_token = out[:, -1, :]
+        last_token = out[:, 0, :]
         return self.txt_proj(last_token), out
 
 
