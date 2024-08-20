@@ -199,6 +199,8 @@ class Trainer:
 
 
 if __name__ == "__main__":
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.enabled = True
 

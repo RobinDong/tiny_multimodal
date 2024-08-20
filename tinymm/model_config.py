@@ -91,3 +91,19 @@ class ALBEFBaseConfig(ModelConfig):
     text_dropout: float = 0.0
     itc_embd: int = 256  # The original ALBEF use 256 dims for ITC loss
     multimodal_layer: int = 6
+
+
+@dataclass
+class BLIPBaseConfig(ModelConfig):
+    model_name: str = "BLIP"
+    model_size: str = "Base"
+    batch_size: int = 24
+    image_encoder_name: str = "vit_base_patch16_224"
+    image_dropout: float = 0.0
+    text_encoder_name: str = "GPT"
+    text_embd: int = 768
+    text_layer: int = 6
+    text_head: int = 12
+    text_dropout: float = 0.0
+    itc_embd: int = 256  # The original ALBEF use 256 dims for ITC loss
+    multimodal_layer: int = 6
